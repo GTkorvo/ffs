@@ -609,10 +609,10 @@ FMStructDescList target_list;
 		}
 	    } else {
 		
-		fprintf(stderr, "Unknown field type for field %s ->\"%s\", format %lx\n",
+		fprintf(stderr, "Unknown field type for field %s ->\"%s\", format %p\n",
 			input_field.field_name,
 			src_ioformat->body->field_list[input_index].field_type,
-			(long)src_ioformat);
+			src_ioformat);
 		FFSfree_conversion(conv_ptr);
 		return NULL;
 	    }
@@ -834,8 +834,8 @@ void *dest;
 	    } else if (dest_size == sizeof(int)) {
 		int *dest_field = (int *) dest;
 		*dest_field = tmp;
-	    } else if (dest_size == sizeof(long)) {
-		long *dest_field = (long *) dest;
+	    } else if (dest_size == sizeof(intptr_t)) {
+		intptr_t *dest_field = (intptr_t *) dest;
 		*dest_field = tmp;
 #if SIZEOF_LONG_LONG != 0
 	    } else if (dest_size == sizeof(long long)) {
@@ -872,8 +872,8 @@ void *dest;
 	    } else if (dest_size == sizeof(int)) {
 		unsigned int *dest_field = (unsigned int *) dest;
 		*dest_field = tmp;
-	    } else if (dest_size == sizeof(long)) {
-		unsigned long *dest_field = (unsigned long *) dest;
+	    } else if (dest_size == sizeof(uintptr_t)) {
+		uintptr_t *dest_field = (uintptr_t *) dest;
 		*dest_field = tmp;
 #if SIZEOF_LONG_LONG != 0
 	    } else if (dest_size == sizeof(long long)) {
@@ -992,8 +992,8 @@ int indent;
 	   conv_ptr->base_size_delta, conv_ptr->max_var_expansion,
 	   conv_ptr->target_pointer_size, conv_ptr->string_offset_size,
 	   conv_ptr->converted_strings);
-    printf(" conversion_function= %lx, required_align=%d\n",
-	   (long) conv_ptr->conv_func, conv_ptr->required_alignment);
+    printf(" conversion_function= %p, required_align=%d\n",
+	   conv_ptr->conv_func, conv_ptr->required_alignment);
     for (ind = 0; ind < indent; ind++)
 	printf("    ");
     printf("  There are %d conversions registered:\n", conv_ptr->conv_count);
@@ -1206,13 +1206,13 @@ void *src_string_base;
 	    int i;
 	    int limit = 30;
 	    int *tmp = (int *) (((char *) src_string_base) -
-				(((long) src_string_base) % 4));
+				(((intptr_t) src_string_base) % 4));
 	    printf("record of type \"%s\", contents :\n", 
 		   conv->ioformat->body->format_name);
 	    if (limit * sizeof(int) > conv->ioformat->body->record_length)
 		limit = conv->ioformat->body->record_length / sizeof(int);
 	    for (i = 0; i < limit; i += 4) {
-		printf("%lx: %8x %8x %8x %8x\n", (long) ((char *) src) + (i * 4),
+		printf("%lx: %8x %8x %8x %8x\n", (intptr_t) ((char *) src) + (i * 4),
 		       ((int *) src)[i], ((int *) src)[i + 1],
 		       ((int *) src)[i + 2], ((int *) src)[i + 3]);
 	    }
@@ -1233,7 +1233,7 @@ void *src_string_base;
 		    }
 		}
 */		for (i = 0; i < limit; i += 4) {
-		    printf("%lx: %8x %8x %8x %8x\n", (long) ((char *) tmp) + (i * 4),
+		    printf("%lx: %8x %8x %8x %8x\n", (intptr_t) ((char *) tmp) + (i * 4),
 			   ((int *) tmp)[i],
 			   ((int *) tmp)[i + 1],
 			   ((int *) tmp)[i + 2],
@@ -1353,7 +1353,7 @@ transpose_array(int *dimens, char *src, char *dest, int source_column_major,
     free(index);
 }
 
-static long
+static intptr_t
 get_offset_for_addr(char *src_field_addr, ConvStatus conv_status, 
 		    IOconvFieldStruct *conv)
 {
@@ -1387,7 +1387,7 @@ convert_address_field(char *src_field_addr, char **output_source_ptr,
 	output_dest = (char*)conv_status->dest_pointer_base + offset + 
 	    conv_status->dest_offset_adjust;
 	
-	if ((align_tmp = (((unsigned long)output_dest) % required_alignment)) != 0) {
+	if ((align_tmp = (((uintptr_t)output_dest) % required_alignment)) != 0) {
 	    output_dest += (required_alignment - align_tmp);
 	    conv_status->dest_offset_adjust += (required_alignment - align_tmp);
 	}
@@ -1418,7 +1418,7 @@ new_convert_address_field(int offset, char **output_source_ptr,
 	output_dest = (char*)conv_status->dest_pointer_base + offset + 
 	    conv_status->dest_offset_adjust;
 	
-	if ((align_tmp = (((unsigned long)output_dest) % required_alignment)) != 0) {
+	if ((align_tmp = (((uintptr_t)output_dest) % required_alignment)) != 0) {
 	    output_dest += (required_alignment - align_tmp);
 	    conv_status->dest_offset_adjust += (required_alignment - align_tmp);
 	}
@@ -1710,40 +1710,40 @@ void *data;
 	if (iofield->size == sizeof(char)) {
 	    char tmp;
 	    memcpy(&tmp, (char *) data + iofield->offset, sizeof(char));
-	    return (long) tmp;
+	    return (MAX_INTEGER_TYPE) tmp;
 	} else if (iofield->size == sizeof(short)) {
 	    short tmp;
 	    memcpy(&tmp, (char *) data + iofield->offset, sizeof(short));
 	    if (iofield->byte_swap)
 		byte_swap((char *) &tmp, sizeof(short));
-	    return (long) tmp;
+	    return (MAX_INTEGER_TYPE) tmp;
 	} else if (iofield->size == sizeof(int)) {
 	    int tmp;
 	    memcpy(&tmp, (char *) data + iofield->offset, sizeof(int));
 	    if (iofield->byte_swap)
 		byte_swap((char *) &tmp, sizeof(int));
-	    return (long) tmp;
-	} else if (iofield->size == sizeof(long)) {
-	    long tmp;
-	    memcpy(&tmp, (char *) data + iofield->offset, sizeof(long));
+	    return (MAX_INTEGER_TYPE) tmp;
+	} else if (iofield->size == sizeof(intptr_t)) {
+	    intptr_t tmp;
+	    memcpy(&tmp, (char *) data + iofield->offset, sizeof(intptr_t));
 	    if (iofield->byte_swap)
-		byte_swap((char *) &tmp, sizeof(long));
+		byte_swap((char *) &tmp, sizeof(intptr_t));
 	    return tmp;
-	} else if (iofield->size == 2 * sizeof(long)) {
-	    long tmp;
+	} else if (iofield->size == 2 * sizeof(intptr_t)) {
+	    intptr_t tmp;
 	    int low_bytes_offset = iofield->offset;
 	    if (WORDS_BIGENDIAN) {
 		if (!iofield->byte_swap) {
-		    low_bytes_offset += sizeof(long);
+		    low_bytes_offset += sizeof(intptr_t);
 		}
 	    } else {
 		if (iofield->byte_swap) {
-		    low_bytes_offset += sizeof(long);
+		    low_bytes_offset += sizeof(intptr_t);
 		}
 	    }
-	    memcpy(&tmp, (char *) data + low_bytes_offset, sizeof(long));
+	    memcpy(&tmp, (char *) data + low_bytes_offset, sizeof(intptr_t));
 	    if (iofield->byte_swap)
-		byte_swap((char *) &tmp, sizeof(long));
+		byte_swap((char *) &tmp, sizeof(intptr_t));
 	    return tmp;
 	} else {
 	    if (!IO_shut_up && !get_long_warn) {
@@ -1758,7 +1758,7 @@ void *data;
     } else if (iofield->data_type == float_type) {
 	MAX_FLOAT_TYPE tmp = get_big_float(iofield, data);
 #ifndef METICULOUS_FLOATS_AND_LONGS
-	return (MAX_INTEGER_TYPE) (long) (double) tmp;
+	return (MAX_INTEGER_TYPE) (intptr_t) (double) tmp;
 #else
 	return (MAX_INTEGER_TYPE) tmp;
 #endif
@@ -1794,27 +1794,27 @@ void *data;
 	    if (iofield->byte_swap)
 		byte_swap((char *) &tmp, sizeof(int));
 	    return (MAX_UNSIGNED_TYPE) tmp;
-	} else if (iofield->size == sizeof(long)) {
-	    unsigned long tmp;
-	    memcpy(&tmp, (char *) data + iofield->offset, sizeof(long));
+	} else if (iofield->size == sizeof(intptr_t)) {
+	    uintptr_t tmp;
+	    memcpy(&tmp, (char *) data + iofield->offset, sizeof(uintptr_t));
 	    if (iofield->byte_swap)
-		byte_swap((char *) &tmp, sizeof(long));
+		byte_swap((char *) &tmp, sizeof(uintptr_t));
 	    return tmp;
-	} else if (iofield->size == 2 * sizeof(long)) {
-	    unsigned long tmp;
+	} else if (iofield->size == 2 * sizeof(uintptr_t)) {
+	    uintptr_t tmp;
 	    int low_bytes_offset = iofield->offset;
 	    if (WORDS_BIGENDIAN) {
 		if (!iofield->byte_swap) {
-		    low_bytes_offset += sizeof(long);
+		    low_bytes_offset += sizeof(uintptr_t);
 		}
 	    } else {
 		if (iofield->byte_swap) {
-		    low_bytes_offset += sizeof(long);
+		    low_bytes_offset += sizeof(uintptr_t);
 		}
 	    }
-	    memcpy(&tmp, (char *) data + low_bytes_offset, sizeof(long));
+	    memcpy(&tmp, (char *) data + low_bytes_offset, sizeof(uintptr_t));
 	    if (iofield->byte_swap)
-		byte_swap((char *) &tmp, sizeof(long));
+		byte_swap((char *) &tmp, sizeof(uintptr_t));
 	    return tmp;
 	} else {
 	    if (!IO_shut_up && !get_long_warn) {
@@ -1829,7 +1829,7 @@ void *data;
     } else if (iofield->data_type == float_type) {
 	MAX_FLOAT_TYPE tmp = get_big_float(iofield, data);
 #ifndef METICULOUS_FLOATS_AND_LONGS
-	return (MAX_UNSIGNED_TYPE) (long) (double) tmp;
+	return (MAX_UNSIGNED_TYPE) (uintptr_t) (double) tmp;
 #else
 	return (MAX_UNSIGNED_TYPE) tmp;
 #endif
@@ -2362,9 +2362,8 @@ gen_mem_float_conv(dill_stream c, struct _FMgetFieldStruct src, int src_addr,
 	    ffs_putreg(c, tmp, DILL_I);
 	    break;
 	}
-#if SIZEOF_LONG == 8
-	case sizeof(long): 
-	    if (((src_offset & 0x7) == 0) && (assume_align >= sizeof(long))) {
+	case sizeof(intptr_t): 
+	    if (((src_offset & 0x7) == 0) && (assume_align >= sizeof(intptr_t))) {
 		dill_reg tmp;
 		ffs_getreg(c, &tmp, DILL_L, DILL_TEMP);
 		dill_ldbsli(c, tmp, src_addr, src_offset);
@@ -2392,7 +2391,6 @@ gen_mem_float_conv(dill_stream c, struct _FMgetFieldStruct src, int src_addr,
 		ffs_putreg(c, tmp2, DILL_I);
 		break;
 	    }
-#endif
 	default: 
 	{
 	    dill_reg tmp, tmp2;
@@ -2401,7 +2399,7 @@ gen_mem_float_conv(dill_stream c, struct _FMgetFieldStruct src, int src_addr,
 	    ffs_getreg(c, &tmp2, DILL_L, DILL_TEMP);
 	REG_DEBUG(("Getting reg %d for float conv\n", tmp));
 	REG_DEBUG(("Getting reg %d for float conv\n", tmp2));
-	    for (i = 0; i < (dest_size >> 1); i += sizeof(long)) {
+	    for (i = 0; i < (dest_size >> 1); i += sizeof(intptr_t)) {
 		int near_offset = i*sizeof(int);
 		int far_offset = dest_size - (i+1)*sizeof(int);
 		dill_ldbsli(c, tmp, src_addr, src_offset + near_offset);
@@ -2601,7 +2599,7 @@ int null_target;
 	if (src_oprnd.size != dest_size) {
 	    /* make it the right size to operate on */
 	    iogen_oprnd tmp_oprnd;
-	    tmp_oprnd = gen_size_conversion(c, src_oprnd, sizeof(long));
+	    tmp_oprnd = gen_size_conversion(c, src_oprnd, sizeof(intptr_t));
 	    free_oprnd(c, src_oprnd);
 	    src_oprnd = tmp_oprnd;
 	    *string_dest_reg = src_oprnd.vc_reg;
@@ -2904,7 +2902,7 @@ int data_already_copied;
 	    next = type_desc;
 	    while (next->type == FMType_array) {
 		if (next->static_size == 0) {
-		    dill_reg addr_reg = (dill_reg)(long)conv_status->control_value;
+		    dill_reg addr_reg = (dill_reg)(intptr_t)conv_status->control_value;
 		    dill_reg val;
 		    int field = next->control_field_index;
 		    ffs_getreg(c, &val, DILL_I, DILL_TEMP);
@@ -3021,7 +3019,7 @@ int data_already_copied;
 		if (next->static_size != 0) {
 		    dill_seti(c, tmp, next->static_size);
 		} else {
-		    dill_reg addr_reg = (dill_reg)(long)conv_status->control_value;
+		    dill_reg addr_reg = (dill_reg)(intptr_t)conv_status->control_value;
 		    int field = next->control_field_index;
 		    dill_ldii(c, tmp, addr_reg, field*sizeof(int));
 		}
@@ -3113,7 +3111,7 @@ int register_args;
 #else
 		    addr_reg = dill_getreg(c, DILL_P);
 		    dill_virtual_lea(c, addr_reg, control_base);
-		    conv_status->control_value = (int*)(long)addr_reg;
+		    conv_status->control_value = (int*)(intptr_t)addr_reg;
 	        }
 	    assert(addr_reg != -1);
 	        gen_store(c, src_oprnd, addr_reg, field*sizeof(int),
@@ -3135,7 +3133,7 @@ int register_args;
 	if (conv->conversions[i].src_field.size == 1) byte_swap = 0;
 	if (conv->conversions[i].default_value) {
 	    iogen_oprnd src_oprnd;
-	    int dst_is_aligned = (assume_align >= sizeof(long)) &
+	    int dst_is_aligned = (assume_align >= sizeof(intptr_t)) &
 		(((conv->conversions[i].dest_offset) % 8) == 0);
 	    src_oprnd = gen_set(c, conv->conversions[i].dest_size, 
 				conv->conversions[i].default_value);
@@ -3156,11 +3154,11 @@ int register_args;
 	    /* data movement is all that is required */
 	    int total_size = src_spec->size * elements;
 
-	    if (total_size <= sizeof(long)) {
+	    if (total_size <= sizeof(intptr_t)) {
 		iogen_oprnd src_oprnd;
-		int src_is_aligned = (assume_align >= sizeof(long)) &
+		int src_is_aligned = (assume_align >= sizeof(intptr_t)) &
 		    (((src_spec->offset) % 8) == 0);
-		int dst_is_aligned = (assume_align >= sizeof(long)) &
+		int dst_is_aligned = (assume_align >= sizeof(intptr_t)) &
 		    (((conv->conversions[i].dest_offset) % 8) == 0);
 		src_oprnd = gen_fetch(c, src_addr, 
 				      src_spec->offset,
