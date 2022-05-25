@@ -2,7 +2,7 @@ set (TESTS context_test context_test2 fortran_test get_set_test)
 set (PROGS ffs_write ffs_index_test ffs_file_test test_file_unique)
 
 if (DILL_FOUND)
-  list (append TESTS no_leaf_test)
+  list (APPEND TESTS no_leaf_test)
 
   ADD_EXECUTABLE(marshal_test marshal_test.c)
   TARGET_LINK_LIBRARIES(marshal_test ffs)
