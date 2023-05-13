@@ -86,8 +86,8 @@ establish_conversion(FFSContext c, FFSTypeHandle f,
 extern int
 FFShas_conversion(FFSTypeHandle format);
 
-extern long
-FFS_est_decode_length(FFSContext context, char *encoded, long record_length);
+extern size_t
+FFS_est_decode_length(FFSContext context, char *encoded, size_t record_length);
 
 extern int
 FFSdecode_in_place(FFSContext context, char *encode, void **dest_ptr);
@@ -145,7 +145,7 @@ write_FFSfile_attrs(FFSFile f, FMFormat format, void *data, attr_list attrs);
 extern int
 write_comment_FFSfile(FFSFile f, const char *comment);
 
-extern long
+extern size_t
 FFSfile_next_decode_length(FFSFile iofile);
 
 typedef enum {
@@ -158,7 +158,7 @@ FFSset_visible(FFSFile ffsfile, int bitmap);
 extern FFSRecordType
 FFSnext_record_type(FFSFile ffsfile);
 
-extern long
+extern size_t
 FFSnext_data_length(FFSFile file);
 
 extern FFSTypeHandle

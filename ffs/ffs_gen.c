@@ -20,7 +20,7 @@
 #define gen_fatal(str) do {fprintf(stderr, "%s\n", str); exit(0);} while (0)
 
 iogen_oprnd
-gen_operand(dill_reg src_reg, int offset, int size, FMdata_type data_type, int aligned, int byte_swap)
+gen_operand(dill_reg src_reg, size_t offset, int size, FMdata_type data_type, int aligned, int byte_swap)
 {
     iogen_oprnd ret_val;
     ret_val.address = 1;
@@ -46,7 +46,7 @@ gen_load(dill_stream c, iogen_oprnd_ptr src_oprnd)
 }
 
 iogen_oprnd
-gen_bswap_fetch(dill_stream c, dill_reg src_reg, int offset,
+gen_bswap_fetch(dill_stream c, dill_reg src_reg, size_t offset,
 		int size, FMdata_type data_type, int aligned)
 {
     iogen_oprnd ret_val;
@@ -248,7 +248,7 @@ gen_set(dill_stream c, int size, char* value)
 }
    
 iogen_oprnd
-gen_fetch(dill_stream c, dill_reg src_reg, int offset, int size,
+gen_fetch(dill_stream c, dill_reg src_reg, size_t offset, size_t size,
 	  FMdata_type data_type, int aligned, int byte_swap)
 {
     iogen_oprnd ret_val;
@@ -257,13 +257,13 @@ gen_fetch(dill_stream c, dill_reg src_reg, int offset, int size,
     if (dill_has_ldbs(c)) {
 	/* have byte swap load extension */
 	if (byte_swap && (data_type != float_type)) {
-	    return gen_bswap_fetch(c, src_reg, offset, size, data_type, 
+	    return gen_bswap_fetch(c, src_reg, offset, (int)size, data_type, 
 				   aligned);
 	}
     }
 #endif
     ret_val.address = 0;
-    ret_val.size = size;
+    ret_val.size = (int)size;
     ret_val.data_type = data_type;
     ret_val.offset = 0;
     ret_val.aligned = 0;
@@ -470,7 +470,7 @@ gen_byte_swap(dill_stream c, iogen_oprnd_ptr src_oprnd)
 }
 
 void
-gen_store(dill_stream c, iogen_oprnd src, dill_reg dest_reg, int offset,
+gen_store(dill_stream c, iogen_oprnd src, dill_reg dest_reg, ssize_t offset,
 	  int size, FMdata_type data_type, int aligned)
 {
     assert(src.size == size);
@@ -559,8 +559,8 @@ gen_store(dill_stream c, iogen_oprnd src, dill_reg dest_reg, int offset,
 }
 
 void
-gen_memcpy(dill_stream c, dill_reg src, int src_offset, dill_reg dest,
-	   int dest_offset, dill_reg size, int const_size)
+gen_memcpy(dill_stream c, dill_reg src, size_t src_offset, dill_reg dest,
+	   size_t dest_offset, dill_reg size, int const_size)
 {
     dill_reg final_src, final_dest;
     if (src_offset != 0) {

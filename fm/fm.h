@@ -4,6 +4,9 @@
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
 #endif
+#include <stdlib.h>
+#include <stdint.h>
+
 typedef struct _FMContextStruct *FMContext;
 
 extern FMContext create_FMcontext();
@@ -239,7 +242,7 @@ extern int
 set_FMPtrField_by_name(FMFieldList field_list, const char *fieldname, void *data, void *ptr_value);
 extern int
 get_FMfieldInt_by_name(FMFieldList field_list, const char *fieldname, void *data);
-extern long
+extern size_t
 get_FMfieldLong_by_name(FMFieldList field_list, const char *fieldname, void *data);
 
 extern void * FMheader_skip(FMContext c, void *data);
@@ -251,7 +254,7 @@ extern float get_FMfloat(FMFieldPtr iofield, void *data);
 extern double get_FMdouble(FMFieldPtr iofield, void *data);
 extern short get_FMshort(FMFieldPtr iofield, void *data);
 extern int get_FMint(FMFieldPtr iofield, void *data);
-extern long get_FMlong(FMFieldPtr iofield, void *data);
+extern size_t get_FMlong(FMFieldPtr iofield, void *data);
 extern void get_FMlong8(FMFieldPtr iofield, void *data, unsigned long *low_long, long *high_long);
 #if defined(SIZEOF_LONG_LONG)
 #if SIZEOF_LONG_LONG != 0
@@ -266,7 +269,7 @@ extern long double get_FMlong_double(FMFieldPtr iofield, void *data);
 #endif
 extern unsigned short get_FMushort(FMFieldPtr iofield, void *data);
 extern unsigned int get_FMuint(FMFieldPtr iofield, void *data);
-extern unsigned long get_FMulong(FMFieldPtr iofield, void *data);
+extern size_t get_FMulong(FMFieldPtr iofield, void *data);
 extern int get_FMulong8(FMFieldPtr iofield, void *data, unsigned long *low_long, unsigned long *high_long);
 extern char *get_FMstring(FMFieldPtr iofield, void *data);
 extern char get_FMchar(FMFieldPtr iofield, void *data);

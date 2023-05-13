@@ -81,7 +81,7 @@ char **result_p;
 {
     int left = length;
     int iget;
-    iget = recv((unsigned int) conn, (char *) buffer + length - left, left, 0);
+    iget = recv((unsigned int) (intptr_t)conn, (char *) buffer + length - left, left, 0);
     if (iget == 0) {
 	*result_p = NULL;
 	*errno_p = 0;
@@ -93,7 +93,7 @@ char **result_p;
 		(*errno_p != WSAECONNRESET)  &&
 	    (*errno_p != WSAEINTR)) {
 	    /* serious error */
-	    fprintf(stderr, "WINSOCK ERROR during receive, %i on socket %i\n",
+	    fprintf(stderr, "WINSOCK ERROR during receive, %i on socket %p\n",
 		    *errno_p, conn);
 	    return -1;
 	} else {
@@ -105,7 +105,7 @@ char **result_p;
     }
     left = length - iget;
     while (left > 0) {
-	iget = recv((unsigned int) conn, (char *) buffer + length - left,
+	iget = recv((unsigned int)(intptr_t) conn, (char *) buffer + length - left,
 		    left, 0);
 	if (iget == 0) {
 	    *result_p = NULL;
@@ -120,7 +120,7 @@ char **result_p;
 		    (*errno_p != WSAEINTR)) {
 
 		    /* serious error */
-		    fprintf(stderr, "WINSOCK ERROR during receive2, %i on socket %i\n",
+		    fprintf(stderr, "WINSOCK ERROR during receive2, %i on socket %p\n",
 			    *errno_p, conn);
 		    return (length - left);
 		} else {
@@ -183,7 +183,7 @@ char **result_p;
     int iget = 0;
 
     while (left > 0) {
-	iget = send((unsigned int) conn, (char *) buffer + length - left,
+	iget = send((unsigned int) (intptr_t)conn, (char *) buffer + length - left,
 		    left, 0);
 	if (iget == SOCKET_ERROR) {
 	    *errno_p = GetLastError();
@@ -218,28 +218,30 @@ void *conn;
 }
 
 static void *
-nt_file_open_func(path, flag_str, input, output)
-const char *path;
-const char *flag_str;
-int *input;
-int *output;
+nt_file_open_func(const char *path, const char *flag_str, int *input, int *output)
 {
 
     void *file;
-    long tmp_flags = (long)flag_str;
+    long tmp_flags = (long)(intptr_t)flag_str;
+    if (input) *input = 0;
+    if (output) *output = 0;
+
     tmp_flags &= ~(O_TRUNC);
     tmp_flags &= ~(O_CREAT);
 
     if ((O_RDONLY == tmp_flags) ||
 	(O_WRONLY == tmp_flags)) {
 	 /* must be old style call */
-	*input = (O_RDONLY == (long) flag_str);
-	*output = (O_WRONLY & (long) flag_str);
+	if (input) *input = (O_RDONLY == (long) (intptr_t)flag_str);
+	if (output) *output = (O_WRONLY & (long) (intptr_t)flag_str);
     } else {
 	if (strcmp(flag_str, "r") == 0) {
-	    *input = TRUE;
+	    if (input) *input = TRUE;
 	} else if (strcmp(flag_str, "w") == 0) {
-	    *output = TRUE;
+	    if (output) *output = TRUE;
+	 } else if (strcmp(flag_str, "a") == 0) {
+	     if (output) *output = 1;
+	     if (input) *input = 1;
 	} else {
 	    fprintf(stderr, "Open flags value not understood for file \"%s\"\n",
 		    path);
@@ -304,12 +306,15 @@ char **result_p;
 
 
 /* Winsock init stuff, ask for ver 1.1 */
-static WORD wVersionRequested = MAKEWORD(1, 1);
+static WORD wVersionRequested = MAKEWORD(2, 2);
 static WSADATA wsaData;
 
 static void
 nt_socket_init_func()
 {
+    static int once = 0;
+    if (once) return;
+    once = 1;
     int nErrorStatus;
     nErrorStatus = WSAStartup(wVersionRequested, &wsaData);
     if (nErrorStatus != 0) {
@@ -324,7 +329,7 @@ static int
 nt_poll_func(conn)
 void *conn;
 {
-    int fd = (int) (long) conn;
+    int fd = (int) (intptr_t) conn;
     struct timeval time;
     fd_set read_fds;
     int ret_val;
@@ -340,22 +345,22 @@ void *conn;
     return (ret_val > 0);
 }
 
-IOinterface_func os_file_read_func = (IOinterface_func)nt_file_read_func;
-IOinterface_func os_file_write_func = (IOinterface_func)nt_file_write_func;
-IOinterface_funcv os_file_readv_func = (IOinterface_funcv)null_file_readv_func;
-IOinterface_funcv os_file_writev_func = NULL;
+IOinterface_func ffs_file_read_func = (IOinterface_func)nt_file_read_func;
+IOinterface_func ffs_file_write_func = (IOinterface_func)nt_file_write_func;
+IOinterface_funcv ffs_file_readv_func = (IOinterface_funcv)null_file_readv_func;
+IOinterface_funcv ffs_file_writev_func = NULL;
 
 
-IOinterface_func os_read_func = (IOinterface_func)nt_socket_read_func;
-IOinterface_func os_write_func = (IOinterface_func)nt_socket_write_func;
-IOinterface_funcv os_readv_func = (IOinterface_funcv)nt_socket_readv_func;
-IOinterface_funcv os_writev_func = NULL;
-int os_max_iov = 1;
+IOinterface_func ffs_read_func = (IOinterface_func)nt_socket_read_func;
+IOinterface_func ffs_write_func = (IOinterface_func)nt_socket_write_func;
+IOinterface_funcv ffs_readv_func = (IOinterface_funcv)nt_socket_readv_func;
+IOinterface_funcv ffs_writev_func = NULL;
+int ffs_max_iov = 1;
 
 
-IOinterface_open os_file_open_func = (IOinterface_open)nt_file_open_func;
-IOinterface_close os_close_func = (IOinterface_close) nt_close_func;
-IOinterface_poll  os_poll_func = (IOinterface_poll)nt_poll_func;
-IOinterface_func os_server_read_func = (IOinterface_func)nt_socket_read_func;
-IOinterface_func os_server_write_func = (IOinterface_func)nt_socket_write_func;
-IOinterface_init os_sockets_init_func = (IOinterface_init)nt_socket_init_func;
+IOinterface_open ffs_file_open_func = (IOinterface_open)nt_file_open_func;
+IOinterface_close ffs_close_func = (IOinterface_close) nt_close_func;
+IOinterface_poll  ffs_poll_func = (IOinterface_poll)nt_poll_func;
+IOinterface_func ffs_server_read_func = (IOinterface_func)nt_socket_read_func;
+IOinterface_func ffs_server_write_func = (IOinterface_func)nt_socket_write_func;
+IOinterface_init ffs_sockets_init_func = (IOinterface_init)nt_socket_init_func;

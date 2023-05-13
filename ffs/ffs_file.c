@@ -4,16 +4,25 @@
 #include "assert.h"
 #include "atl.h"
 #include "ffs.h"
-#include "fm_internal.h"
-#include "ffs_internal.h"
-#include "strings.h"
+#include "string.h"
 #include "stdio.h"
 #include "stdlib.h"
+#ifndef _MSC_VER
 #include "unistd.h"
+#include <arpa/inet.h>
+#else
+#include <winsock.h>
+#include <io.h>
+#define lseek _lseek
+#endif
 #include "errno.h"
 #include "string.h"
-#include <arpa/inet.h>
-
+#include "sys/types.h"
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "fm_internal.h"
+#include "ffs_internal.h"
 #include "io_interface.h"
 
 typedef struct _CDLLnode {
@@ -218,7 +227,7 @@ static FFSRecordType next_record_type(FFSFile ffsfile);
 static void
 update_fpos(FFSFile f)
 {
-    int fd = (int)(long)f->file_id;
+    int fd = (int)(intptr_t)f->file_id;
     f->fpos = lseek(fd, 0, SEEK_CUR);
 }
 
@@ -400,20 +409,20 @@ open_FFSfile(const char *path, const char *flags)
     parse_flags(flags, &allow_input, &allow_output, &raw, &index);
 
     if (allow_input && allow_output) {
-	file = ffs_file_open_func(path, "a", NULL, NULL);
+	file = (FFSFile) (ffs_file_open_func)(path, "a", NULL, NULL);
 	if (file == (void*)0) {
 	    /* if open for append failed, try creating it */
-	    file = ffs_file_open_func(path, "w", NULL, NULL);
+	    file = (FFSFile)(ffs_file_open_func)(path, "w", NULL, NULL);
 	}
     } else if (allow_input) {
-	file = ffs_file_open_func(path, "r", NULL, NULL);
+	file = (FFSFile)(ffs_file_open_func)(path, "r", NULL, NULL);
     } else {
-	file = ffs_file_open_func(path, "w", NULL, NULL);
+	file = (FFSFile)(ffs_file_open_func)(path, "w", NULL, NULL);
     }
 
     if (file == NULL) {
 	char msg[128];
-	(void) sprintf(msg, "open_FFSfile failed for %s :", path);
+	(void) snprintf(msg, sizeof(msg), "open_FFSfile failed for %s :", path);
 	perror(msg);
 	return NULL;
     }
@@ -474,7 +483,7 @@ static void
 init_write_index_block(FFSFile f)
 {
     int data_index_start = 0;
-    int fd = (int)(long)f->file_id;
+    int fd = (int)(intptr_t)f->file_id;
     off_t end_of_index;
     if (f->read_index == NULL) { /* if not append */
 	end_of_index = lseek(fd, INDEX_BLOCK_SIZE, SEEK_CUR);
@@ -505,11 +514,11 @@ static void output_index_end(FFSFile f);
 static void
 dump_index_block(FFSFile f)
 {
-    int fd = (int)(long)f->file_id;
+    int fd = (int)(intptr_t)f->file_id;
     off_t end = lseek(fd, 0, SEEK_CUR);
     int ret;
 
-    int size =  f->cur_index->write_info.index_block_size;
+    size_t size =  f->cur_index->write_info.index_block_size;
     unsigned char *index_base = f->cur_index->write_info.index_block;
 
     output_index_end(f);
@@ -520,10 +529,10 @@ dump_index_block(FFSFile f)
      * In the first chunk, 
      *    the top byte is 0x4, next three are length of the index block.
      */
-    *((int*)index_base) = htonl((0x4<<24) | size);
-    *((int*)(index_base+4)) = htonl(end);  /* link to next index */
-    *((int*)(index_base+8)) = htonl(f->cur_index->write_info.data_index_start); /* data_index_start); */
-    *((int*)(index_base+12)) = htonl(f->cur_index->write_info.data_index_end); /* data_index_end); */
+    *((int*)index_base) = (int) htonl((0x4<<24) | (long)size);
+    *((int*)(index_base + 4)) = (int)htonl(end);  /* link to next index */
+    *((int*)(index_base+8)) = (int)htonl(f->cur_index->write_info.data_index_start); /* data_index_start); */
+    *((int*)(index_base+12)) = (int)htonl(f->cur_index->write_info.data_index_end); /* data_index_end); */
     ret = f->write_func(f->file_id, index_base, size, NULL, NULL);
     if (ret != size) {
 	printf("Index write failed errno %d\n", errno);
@@ -790,7 +799,7 @@ write_comment_FFSfile(FFSFile f, const char *comment)
 {
     struct iovec vec[2];
 
-    int byte_size = strlen(comment) + 1;
+    size_t byte_size = strlen(comment) + 1;
     int indicator;
     /*
      * next_comment indicator is a 4-byte chunk in network byte order.
@@ -1050,8 +1059,8 @@ FFSread_index(FFSFile ffsfile)
     char *index_data;
     FFSIndexItem index_item;
     off_t index_fpos;
-    int index_size;
-    int fd = (int)(long)ffsfile->file_id;
+    size_t index_size;
+    int fd = (int)(intptr_t)ffsfile->file_id;
     int currentPos = lseek(fd, (size_t)0, SEEK_CUR);
     int end = lseek(fd, (size_t)0, SEEK_END);
     lseek(fd, currentPos, SEEK_SET);   // seek back to original spot
@@ -1161,7 +1170,7 @@ FFSnext_type_handle(FFSFile ffsfile)
     return ffsfile->next_data_handle;
 }
 
-extern long
+extern size_t
 FFSfile_next_decode_length(FFSFile iofile)
 {
     FFSContext context = iofile->c;
@@ -1199,7 +1208,7 @@ FFSread_comment(FFSFile ffsfile)
 static int
 FFSset_fpos(FFSFile file,  off_t fpos)
 {
-    int fd = (int)(long)file->file_id;
+    int fd = (int)(intptr_t)file->file_id;
     /* dangerous to set FPOS if not indexed, but we'll allow it */
     if (file->file_org == Indexed) {
 	/* 
@@ -1236,7 +1245,7 @@ FFSset_fpos(FFSFile file,  off_t fpos)
 extern int
 FFSseek(FFSFile file, int data_item)
 {
-    int fd = (int)(long)file->file_id;
+    int fd = (int)(intptr_t)file->file_id;
     struct _FFSIndexItem *index;
     off_t fpos;
     int index_item;
@@ -1307,7 +1316,7 @@ get_AtomicInt(FFSFile file, FILE_INT *file_int_ptr)
 static void
 read_all_index_and_formats(FFSFile file)
 {
-    int fd = (int)(long)file->file_id;
+    int fd = (int)(intptr_t)file->file_id;
     off_t fpos = 1;
     int currentPos = lseek(fd, (size_t)0, SEEK_CUR);
     int end = lseek(fd, (size_t)0, SEEK_END);
@@ -1371,7 +1380,7 @@ convert_last_index_block(FFSFile ffsfile)
     }
     ffsfile->cur_index->write_info.data_index_start =  htonl(*((int*)(index_data+8)));;
     ffsfile->data_count = read_index->last_data_count + 1;
-    int fd = (int)(long)ffsfile->file_id;
+    int fd = (int)(intptr_t)ffsfile->file_id;
     if (lseek(fd, 0, SEEK_END) == -1)
 	return;
 }
@@ -1466,11 +1475,11 @@ next_record_type(FFSFile ffsfile)
                 if (!ffsfile->next_actual_handle && ffsfile->index_head) {
 
                     struct _FFSIndexItem *index = NULL;
-                    int fd = (int)(long)ffsfile->file_id;
+                    int fd = (int)(intptr_t)ffsfile->file_id;
                     off_t fpos_bak = lseek(fd, 0, SEEK_CUR);
 		    int fid_len = ffsfile->next_fid_len;
 		    char tmp_fid_storage[64];
-		    int tmp_data_len;
+		    size_t tmp_data_len;
 		    int done = 0;
 		    assert(sizeof(tmp_fid_storage) > fid_len);
 		    /* store away the format ID we've read */
@@ -1532,7 +1541,7 @@ next_record_type(FFSFile ffsfile)
 		if ((ffsfile->next_data_handle == NULL) &&
                     (!ffsfile->raw_flag)) {
 		    /* no target for this format, discard */
-		    int more = ffsfile->next_data_len - ffsfile->next_fid_len;
+		    size_t more = ffsfile->next_data_len - ffsfile->next_fid_len;
 		    if (ffsfile->read_func(ffsfile->file_id, tmp_buf +
                                            ffsfile->next_fid_len, more, NULL,
                                            NULL) != more) {
@@ -1561,7 +1570,7 @@ next_record_type(FFSFile ffsfile)
 		ffsfile->next_record_type = FFSindex;
 		ffsfile->next_data_len = indicator_chunk & 0xffffff;
 /*		if (!ffsfile->expose_index) {
-		    lseek((int)(long)ffsfile->file_id, INDEX_BLOCK_SIZE-4, SEEK_CUR);
+		    lseek((int)(intptr_t)ffsfile->file_id, INDEX_BLOCK_SIZE-4, SEEK_CUR);
 		    ffsfile->read_ahead = FALSE;
 		    return next_record_type(ffsfile);
 		    }*/
@@ -1576,7 +1585,7 @@ next_record_type(FFSFile ffsfile)
     return ffsfile->next_record_type;
 }
 
-extern long
+extern size_t
 FFSnext_data_length(FFSFile file)
 {
     if (file->status != OpenForRead)
@@ -1595,7 +1604,7 @@ extern int
 FFSread(FFSFile file, void *dest)
 {
     int header_size;
-    int read_size;
+    size_t read_size;
     char *tmp_buf;
 
     if (file->status != OpenForRead)
@@ -1688,7 +1697,7 @@ FFSread_raw(FFSFile file, void *dest, int buffer_size, FFSTypeHandle *fp)
 {
     FFSTypeHandle f;
     int header_size;
-    int read_size;
+    size_t read_size;
 
     if (file->status != OpenForRead)
 	return 0;
@@ -1719,7 +1728,7 @@ FFSread_raw_header(FFSFile file, void *dest, int buffer_size, FFSTypeHandle *fp)
 {
     FFSTypeHandle f;
     int header_size;
-    int read_size;
+    size_t read_size;
 
     if (file->status != OpenForRead)
 	return 0;
@@ -1754,7 +1763,7 @@ extern int
 FFSread_to_buffer(FFSFile file, FFSBuffer b,  void **dest)
 {
     int header_size;
-    int read_size;
+    size_t read_size;
     char *tmp_buf;
 
     if (file->status != OpenForRead)
