@@ -25,11 +25,13 @@ typedef int (*IOinterface_poll)(void *conn);
 typedef void *(*IOinterface_open)(const char *path, const char *flag_str, int *input, int *output);
 typedef void (*IOinterface_init)(void );
 #endif
+typedef int (*IOinterface_lseek)(void* conn, size_t pos, int cmd);
 
 extern IOinterface_func ffs_file_read_func;
 extern IOinterface_func ffs_file_write_func;
 extern IOinterface_funcv ffs_file_readv_func;
 extern IOinterface_funcv ffs_file_writev_func;
+extern IOinterface_lseek ffs_file_lseek_func;
 
 extern IOinterface_func ffs_read_func;
 extern IOinterface_func ffs_write_func;

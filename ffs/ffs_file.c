@@ -13,7 +13,6 @@
 #else
 #include <winsock.h>
 #include <io.h>
-#define lseek _lseek
 #endif
 #include "errno.h"
 #include "string.h"
@@ -227,8 +226,7 @@ static FFSRecordType next_record_type(FFSFile ffsfile);
 static void
 update_fpos(FFSFile f)
 {
-    int fd = (int)(intptr_t)f->file_id;
-    f->fpos = lseek(fd, 0, SEEK_CUR);
+    f->fpos = ffs_file_lseek_func(f->file_id, 0, SEEK_CUR);
 }
 
 static void
@@ -486,7 +484,7 @@ init_write_index_block(FFSFile f)
     int fd = (int)(intptr_t)f->file_id;
     off_t end_of_index;
     if (f->read_index == NULL) { /* if not append */
-	end_of_index = lseek(fd, INDEX_BLOCK_SIZE, SEEK_CUR);
+	end_of_index = ffs_file_lseek_func(f->file_id, INDEX_BLOCK_SIZE, SEEK_CUR);
 	if (f->cur_index) {
 	    data_index_start = f->cur_index->write_info.data_index_end;
 	} else {
@@ -515,7 +513,7 @@ static void
 dump_index_block(FFSFile f)
 {
     int fd = (int)(intptr_t)f->file_id;
-    off_t end = lseek(fd, 0, SEEK_CUR);
+    off_t end = ffs_file_lseek_func(f->file_id, 0, SEEK_CUR);
     int ret;
 
     size_t size =  f->cur_index->write_info.index_block_size;
@@ -523,7 +521,7 @@ dump_index_block(FFSFile f)
 
     output_index_end(f);
     f->cur_index->write_info.data_index_end = f->data_count-1;
-    lseek(fd, f->cur_index->write_info.base_file_pos, SEEK_SET);
+    ffs_file_lseek_func(f->file_id, f->cur_index->write_info.base_file_pos, SEEK_SET);
     /*
      * next_data indicator is a 2 4-byte chunks in network byte order.
      * In the first chunk, 
@@ -537,7 +535,7 @@ dump_index_block(FFSFile f)
     if (ret != size) {
 	printf("Index write failed errno %d\n", errno);
     }
-    lseek(fd, end, SEEK_SET);
+    ffs_file_lseek_func(f->file_id, end, SEEK_SET);
     init_write_index_block(f);
 }
 
@@ -1061,9 +1059,9 @@ FFSread_index(FFSFile ffsfile)
     off_t index_fpos;
     size_t index_size;
     int fd = (int)(intptr_t)ffsfile->file_id;
-    int currentPos = lseek(fd, (size_t)0, SEEK_CUR);
-    int end = lseek(fd, (size_t)0, SEEK_END);
-    lseek(fd, currentPos, SEEK_SET);   // seek back to original spot
+    int currentPos = ffs_file_lseek_func(ffsfile->file_id, (size_t)0, SEEK_CUR);
+    int end = ffs_file_lseek_func(ffsfile->file_id, (size_t)0, SEEK_END);
+    ffs_file_lseek_func(ffsfile->file_id, currentPos, SEEK_SET);   // seek back to original spot
 
     if (ffsfile->read_ahead == FALSE) {
 	(void) next_record_type(ffsfile);
@@ -1224,7 +1222,7 @@ FFSset_fpos(FFSFile file,  off_t fpos)
 	last_element = &file->index_tail->elements[last_element_index];
 	while(fpos > last_element->fpos) {
 	    /* don't skip forward past index blocks without reading them */
-	    if (lseek(fd, file->index_tail->next_index_offset, SEEK_SET) == -1)
+	    if (ffs_file_lseek_func(file->file_id, file->index_tail->next_index_offset, SEEK_SET) == -1)
 		return 0;
 	    file->read_ahead = FALSE;
 	    (void) FFSread_index(file);
@@ -1233,7 +1231,7 @@ FFSset_fpos(FFSFile file,  off_t fpos)
 	    last_element = &file->index_tail->elements[last_element_index];
 	}
     }
-    if (lseek(fd, fpos, SEEK_SET) == -1) return 0;
+    if (ffs_file_lseek_func(file->file_id, fpos, SEEK_SET) == -1) return 0;
     file->read_ahead = FALSE;
     return 1;
 }
@@ -1265,7 +1263,7 @@ FFSseek(FFSFile file, int data_item)
     while (data_item > file->index_tail->last_data_count &&
            file->index_tail != prev_index_tail) {
 	/* don't skip forward past index blocks without reading them */
-	if (lseek(fd, file->index_tail->next_index_offset, SEEK_SET) == -1)
+	if (ffs_file_lseek_func(file->file_id, file->index_tail->next_index_offset, SEEK_SET) == -1)
 	    return 0;
     	file->read_ahead = FALSE;
         prev_index_tail = file->index_tail;
@@ -1318,9 +1316,9 @@ read_all_index_and_formats(FFSFile file)
 {
     int fd = (int)(intptr_t)file->file_id;
     off_t fpos = 1;
-    int currentPos = lseek(fd, (size_t)0, SEEK_CUR);
-    int end = lseek(fd, (size_t)0, SEEK_END);
-    lseek(fd, currentPos, SEEK_SET);   // seek back to original spot
+    int currentPos = ffs_file_lseek_func(file->file_id, (size_t)0, SEEK_CUR);
+    int end = ffs_file_lseek_func(file->file_id, (size_t)0, SEEK_END);
+    ffs_file_lseek_func(file->file_id, currentPos, SEEK_SET);   // seek back to original spot
 
     if (!file->index_head)
         FFSread_index(file);
@@ -1338,7 +1336,7 @@ read_all_index_and_formats(FFSFile file)
 	for (i = 0; i < file->index_tail->elem_count; i++) {
 	    if (file->index_tail->elements[i].type == FFSformat) {
 		fpos = file->index_tail->elements[i].fpos;
-		if (lseek(fd, fpos, SEEK_SET) == -1)
+		if (ffs_file_lseek_func(file->file_id, fpos, SEEK_SET) == -1)
 		    return;
 		(void) FFSread_format(file);
 	    }
@@ -1346,13 +1344,13 @@ read_all_index_and_formats(FFSFile file)
 	/* skip to next index block */
 	fpos = file->index_tail->next_index_offset;
 	if (fpos != end) {
-	    if (lseek(fd, fpos, SEEK_SET) == -1)
+	    if (ffs_file_lseek_func(file->file_id, fpos, SEEK_SET) == -1)
 		return;
 	    FFSread_index(file);
 	}
     }
-    lseek(fd, 0, SEEK_END);
-    file->fpos = lseek(fd, 0, SEEK_CUR);
+    ffs_file_lseek_func(file->file_id, 0, SEEK_END);
+    file->fpos = ffs_file_lseek_func(file->file_id, 0, SEEK_CUR);
 }
 
 static void
@@ -1381,7 +1379,7 @@ convert_last_index_block(FFSFile ffsfile)
     ffsfile->cur_index->write_info.data_index_start =  htonl(*((int*)(index_data+8)));;
     ffsfile->data_count = read_index->last_data_count + 1;
     int fd = (int)(intptr_t)ffsfile->file_id;
-    if (lseek(fd, 0, SEEK_END) == -1)
+    if (ffs_file_lseek_func(ffsfile->file_id, 0, SEEK_END) == -1)
 	return;
 }
 
@@ -1476,7 +1474,7 @@ next_record_type(FFSFile ffsfile)
 
                     struct _FFSIndexItem *index = NULL;
                     int fd = (int)(intptr_t)ffsfile->file_id;
-                    off_t fpos_bak = lseek(fd, 0, SEEK_CUR);
+                    off_t fpos_bak = ffs_file_lseek_func(ffsfile->file_id, 0, SEEK_CUR);
 		    int fid_len = ffsfile->next_fid_len;
 		    char tmp_fid_storage[64];
 		    size_t tmp_data_len;
@@ -1497,10 +1495,10 @@ next_record_type(FFSFile ffsfile)
 				!(memcmp(elem->format_id,
 					 tmp_buf, ffsfile->next_fid_len))) {
 
-				if (lseek(fd, elem->fpos, SEEK_SET) != -1) {
+				if (ffs_file_lseek_func(ffsfile->file_id, elem->fpos, SEEK_SET) != -1) {
 				    ffsfile->read_ahead = FALSE;
 				    FFSread_format(ffsfile);
-				    lseek(fd, fpos_bak, SEEK_SET);
+				    ffs_file_lseek_func(ffsfile->file_id, fpos_bak, SEEK_SET);
 				    ffsfile->read_ahead = TRUE;
 				    ffsfile->next_record_type = FFSdata;
 				    /* tmp_buf might have changed */
@@ -1570,7 +1568,7 @@ next_record_type(FFSFile ffsfile)
 		ffsfile->next_record_type = FFSindex;
 		ffsfile->next_data_len = indicator_chunk & 0xffffff;
 /*		if (!ffsfile->expose_index) {
-		    lseek((int)(intptr_t)ffsfile->file_id, INDEX_BLOCK_SIZE-4, SEEK_CUR);
+		    ffs_file_lseek_func((int)(intptr_t)ffsfile->file_id, INDEX_BLOCK_SIZE-4, SEEK_CUR);
 		    ffsfile->read_ahead = FALSE;
 		    return next_record_type(ffsfile);
 		    }*/

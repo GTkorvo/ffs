@@ -1234,7 +1234,7 @@ transpose_array(size_t *dimens, char *src, char *dest, int source_column_major,
     struct _FMgetFieldStruct tmp_spec = *src_spec;
 
     if (dimen_count <= 1) return;
-    index = malloc(sizeof(int) * dimen_count);
+    index = malloc(sizeof(index[0]) * dimen_count);
     for(i = 0; i< dimen_count; i++) {
 	index[i] = 0;
     }

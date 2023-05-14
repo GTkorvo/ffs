@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <io.h>
 #include "ffs.h"
 #include "io_interface.h"
 #include "ffs_internal.h"
@@ -26,21 +27,14 @@ char **result_p;
     bResult = ReadFile(conn, (char *) buffer, length, &iget, NULL);
 
     if (iget == 0) {
-	*result_p = "End of file";
-	*errno_p = 0;
+	if (result_p) *result_p = "End of file";
+	if (errno_p) *errno_p = 0;
 	return 0;		/* end of file */
     } else {
 	if (!bResult) {
-	    *errno_p = GetLastError();
-	    if ((*errno_p != WSAEWOULDBLOCK) &&
-		(*errno_p != WSAEINPROGRESS) &&
-		(*errno_p != WSAEINTR)) {
-		/* serious error */
-		return -1;
-	    } else {
-		*errno_p = 0;
-		iget = 0;
-	    }
+	    return -1;
+	} else {
+		if(errno_p) *errno_p = 0;
 	}
     }
 
@@ -49,22 +43,15 @@ char **result_p;
 	bResult = ReadFile((HANDLE) conn, (char *) buffer + length - left,
 			   left, &iget, NULL);
 	if (iget == 0) {
-	    *result_p = "End of file";
-	    *errno_p = 0;
+	    if (result_p) *result_p = "End of file";
+	    if (errno_p) *errno_p = 0;
 	    return length - left;	/* end of file */
 	} else {
 	    if (!bResult) {
-		*errno_p = GetLastError();
-		if ((*errno_p != WSAEWOULDBLOCK) &&
-		    (*errno_p != WSAEINPROGRESS) &&
-		    (*errno_p != WSAEINTR)) {
-		    /* serious error */
 		    return (length - left);
 		} else {
-		    *errno_p = 0;
-		    iget = 0;
+		    if (errno_p) *errno_p = 0;
 		}
-	    }
 	}
 	left -= iget;
     }
@@ -83,23 +70,24 @@ char **result_p;
     int iget;
     iget = recv((unsigned int) (intptr_t)conn, (char *) buffer + length - left, left, 0);
     if (iget == 0) {
-	*result_p = NULL;
-	*errno_p = 0;
+	if (result_p) *result_p = NULL;
+	if (errno_p) *errno_p = 0;
 	return 0;		/* No more socket data */
     } else if (iget == SOCKET_ERROR) {
-	*errno_p = WSAGetLastError();
-	if ((*errno_p != WSAEWOULDBLOCK) &&
-	    (*errno_p != WSAEINPROGRESS) &&
-		(*errno_p != WSAECONNRESET)  &&
-	    (*errno_p != WSAEINTR)) {
+	DWORD tmp = WSAGetLastError();
+	if (errno_p) *errno_p = tmp;
+	if ((tmp != WSAEWOULDBLOCK) &&
+	    (tmp != WSAEINPROGRESS) &&
+		(tmp != WSAECONNRESET)  &&
+	    (tmp != WSAEINTR)) {
 	    /* serious error */
 	    fprintf(stderr, "WINSOCK ERROR during receive, %i on socket %p\n",
-		    *errno_p, conn);
+		    tmp, conn);
 	    return -1;
 	} else {
-		if (*errno_p == WSAECONNRESET)
+		if (tmp == WSAECONNRESET)
 			return -1;
-	    *errno_p = 0;
+	    if (errno_p) *errno_p = 0;
 	    iget = 0;
 	}
     }
@@ -108,25 +96,26 @@ char **result_p;
 	iget = recv((unsigned int)(intptr_t) conn, (char *) buffer + length - left,
 		    left, 0);
 	if (iget == 0) {
-	    *result_p = NULL;
-	    *errno_p = 0;
+	    if (result_p) *result_p = NULL;
+	    if (errno_p) *errno_p = 0;
 	    return length - left;	/* no more socket data */
 	} else {
 	    if (iget == SOCKET_ERROR) {
-		*errno_p = WSAGetLastError();
-		if ((*errno_p != WSAEWOULDBLOCK) &&
-		    (*errno_p != WSAEINPROGRESS) &&
-			(*errno_p != WSAECONNRESET)  &&
-		    (*errno_p != WSAEINTR)) {
+		DWORD tmp = WSAGetLastError();
+		if (errno_p) *errno_p = tmp;
+		if ((tmp != WSAEWOULDBLOCK) &&
+		    (tmp != WSAEINPROGRESS) &&
+			(tmp != WSAECONNRESET)  &&
+		    (tmp != WSAEINTR)) {
 
 		    /* serious error */
 		    fprintf(stderr, "WINSOCK ERROR during receive2, %i on socket %p\n",
-			    *errno_p, conn);
+			    tmp, conn);
 		    return (length - left);
 		} else {
-			if (*errno_p == WSAECONNRESET)
+			if (tmp == WSAECONNRESET)
 				return -1;
-		    *errno_p = 0;
+		    if(errno_p) *errno_p = 0;
 		    iget = 0;
 		}
 	    }
@@ -154,14 +143,15 @@ char **result_p;
 	bResult = WriteFile((HANDLE) conn, (char *) buffer + length - left, 
 			    left, &iget, NULL);
 	if (!bResult) {
-	    *errno_p = GetLastError();
-	    if ((*errno_p != WSAEWOULDBLOCK) &&
-		(*errno_p != WSAEINPROGRESS) &&
-		(*errno_p != WSAEINTR)) {
+	    DWORD tmp = GetLastError();
+	    if (errno_p) tmp = tmp;
+	    if ((tmp != WSAEWOULDBLOCK) &&
+		(tmp != WSAEINPROGRESS) &&
+		(tmp != WSAEINTR)) {
 		/* serious error */
 		return (length - left);
 	    } else {
-		*errno_p = 0;
+		if(errno_p) *errno_p = 0;
 		iget = 0;
 	    }
 	}
@@ -186,14 +176,15 @@ char **result_p;
 	iget = send((unsigned int) (intptr_t)conn, (char *) buffer + length - left,
 		    left, 0);
 	if (iget == SOCKET_ERROR) {
-	    *errno_p = GetLastError();
-	    if ((*errno_p != WSAEWOULDBLOCK) &&
-		(*errno_p != WSAEINPROGRESS) &&
-		(*errno_p != WSAEINTR)) {
+	    DWORD tmp = GetLastError();
+	    if (errno_p) *errno_p = tmp;
+	    if ((tmp != WSAEWOULDBLOCK) &&
+		(tmp != WSAEINPROGRESS) &&
+		(tmp != WSAEINTR)) {
 		/* serious error */
 		return (length - left);
 	    } else {
-		*errno_p = 0;
+		if (errno_p) *errno_p = 0;
 		iget = 0;
 	    }
 	}
@@ -220,7 +211,8 @@ void *conn;
 static void *
 nt_file_open_func(const char *path, const char *flag_str, int *input, int *output)
 {
-
+    int readfile = 0;
+    int writefile = 0;
     void *file;
     long tmp_flags = (long)(intptr_t)flag_str;
     if (input) *input = 0;
@@ -237,11 +229,14 @@ nt_file_open_func(const char *path, const char *flag_str, int *input, int *outpu
     } else {
 	if (strcmp(flag_str, "r") == 0) {
 	    if (input) *input = TRUE;
+	    readfile = 1;
 	} else if (strcmp(flag_str, "w") == 0) {
 	    if (output) *output = TRUE;
+	    writefile = 1;
 	 } else if (strcmp(flag_str, "a") == 0) {
 	     if (output) *output = 1;
 	     if (input) *input = 1;
+	     readfile = writefile = 1;
 	} else {
 	    fprintf(stderr, "Open flags value not understood for file \"%s\"\n",
 		    path);
@@ -249,7 +244,7 @@ nt_file_open_func(const char *path, const char *flag_str, int *input, int *outpu
 	}
     }
 
-    if (*input) {
+    if (readfile) {
 	file = CreateFile(path, GENERIC_READ, FILE_SHARE_READ,
 		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_ARCHIVE, NULL);
 
@@ -262,6 +257,12 @@ nt_file_open_func(const char *path, const char *flag_str, int *input, int *outpu
     } else {
 	return file;
     }
+}
+
+static int
+nt_file_lseek_func (void *file, size_t pos, int origin)
+{
+    return SetFilePointer((HANDLE)file, (long)pos, 0, origin);
 }
 
 
@@ -304,6 +305,24 @@ char **result_p;
     return icount;
 }
 
+static int
+null_file_writev_func(conn, iov, icount, errno_p, result_p)
+void* conn;
+struct iovec* iov;
+int icount;
+int* errno_p;
+char** result_p;
+{
+
+    int i = 0;
+    for (; i < icount; i++) {
+	if (nt_file_write_func(conn, iov[i].iov_base, iov[i].iov_len, errno_p,
+	    result_p) != iov[i].iov_len) {
+	    return i;
+	}
+    }
+    return icount;
+}
 
 /* Winsock init stuff, ask for ver 1.1 */
 static WORD wVersionRequested = MAKEWORD(2, 2);
@@ -348,7 +367,8 @@ void *conn;
 IOinterface_func ffs_file_read_func = (IOinterface_func)nt_file_read_func;
 IOinterface_func ffs_file_write_func = (IOinterface_func)nt_file_write_func;
 IOinterface_funcv ffs_file_readv_func = (IOinterface_funcv)null_file_readv_func;
-IOinterface_funcv ffs_file_writev_func = NULL;
+IOinterface_funcv ffs_file_writev_func = (IOinterface_funcv)null_file_writev_func;
+IOinterface_lseek ffs_file_lseek_func = (IOinterface_lseek)nt_file_lseek_func;
 
 
 IOinterface_func ffs_read_func = (IOinterface_func)nt_socket_read_func;

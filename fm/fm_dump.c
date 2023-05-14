@@ -79,7 +79,7 @@ dump_output(dstate s, size_t length_estimate, char *format, ...)
     int free_tmp = 0;
     int use_buf = 1;
     if ((s->output_limit != -1) && 
-	(s->output_len + length_estimate > s->output_limit)) {
+	(s->output_len + length_estimate > (size_t)s->output_limit)) {
 	return 0;
     }
     if (s->output_string != NULL) {
@@ -358,7 +358,7 @@ dump_subfields(void *base, FMFormat f, dstate s, size_t data_offset)
 			      &f->var_list[i].type_desc);
 	stop_field(s, fmfield, &f->var_list[i].type_desc);
 	if (ret != 1) return 0;
-	if ((s->output_limit != -1) && (s->output_len >= s->output_limit)) return 0;
+	if ((s->output_limit != -1) && (s->output_len >= (size_t)s->output_limit)) return 0;
     }
     return 1;
 }
@@ -506,7 +506,7 @@ static int
 dump_subfield(void*base, FMFormat f, dstate s, size_t data_offset, void* parent_base, FMTypeDesc *t)
 {
 
-    if ((s->output_limit != -1) && (s->output_len > s->output_limit)) return 0;
+    if ((s->output_limit != -1) && (s->output_len > (size_t)s->output_limit)) return 0;
 
     switch (t->type) {
     case FMType_pointer:

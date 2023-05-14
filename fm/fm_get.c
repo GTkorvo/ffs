@@ -72,11 +72,11 @@ get_big_int(FMFieldPtr field, void *data)
 	    if (field->byte_swap)
 		byte_swap((char *) &tmp, (int) sizeof(int));
 	    return (long) tmp;
-	} else if (field->size == sizeof(long)) {
-	    long tmp;
-	    memcpy(&tmp, (char *) data + field->offset, sizeof(long));
+	} else if (field->size == sizeof(size_t)) {
+	    size_t tmp;
+	    memcpy(&tmp, (char *) data + field->offset, sizeof(size_t));
 	    if (field->byte_swap)
-		byte_swap((char *) &tmp, (int)sizeof(long));
+		byte_swap((char *) &tmp, (int)sizeof(size_t));
 	    return tmp;
 	} else if (field->size == 2 * sizeof(long)) {
 	    long tmp;
@@ -141,11 +141,11 @@ get_big_unsigned(FMFieldPtr field, void *data)
 	    if (field->byte_swap)
 		byte_swap((char *) &tmp, (int)sizeof(int));
 	    return (MAX_UNSIGNED_TYPE) tmp;
-	} else if (field->size == sizeof(long)) {
-	    unsigned long tmp;
-	    memcpy(&tmp, (char *) data + field->offset, sizeof(long));
+	} else if (field->size == sizeof(size_t)) {
+	    size_t tmp;
+	    memcpy(&tmp, (char *) data + field->offset, sizeof(size_t));
 	    if (field->byte_swap)
-		byte_swap((char *) &tmp, (int)sizeof(long));
+		byte_swap((char *) &tmp, (int)sizeof(size_t));
 	    return tmp;
 	} else if (field->size == 2 * sizeof(long)) {
 	    unsigned long tmp;
