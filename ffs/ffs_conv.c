@@ -1913,10 +1913,7 @@ int ffs_getreg(dill_stream s, int *reg_p, int type, int var_tmp){return 0;}
 int ffs_localb(void*s, int size) {return 0;}
 extern
  conv_routine
-generate_conversion(conv, src_alignment, dest_alignment)
-IOConversionPtr conv;
-int src_alignment;
-int dest_alignment;
+generate_conversion(IOConversionPtr conv, int src_alignment, int dest_alignment)
 {
     return NULL;
 }

@@ -481,7 +481,6 @@ static void
 init_write_index_block(FFSFile f)
 {
     int data_index_start = 0;
-    int fd = (int)(intptr_t)f->file_id;
     off_t end_of_index;
     if (f->read_index == NULL) { /* if not append */
 	end_of_index = ffs_file_lseek_func(f->file_id, INDEX_BLOCK_SIZE, SEEK_CUR);
@@ -512,7 +511,6 @@ static void output_index_end(FFSFile f);
 static void
 dump_index_block(FFSFile f)
 {
-    int fd = (int)(intptr_t)f->file_id;
     off_t end = ffs_file_lseek_func(f->file_id, 0, SEEK_CUR);
     int ret;
 
@@ -1058,7 +1056,6 @@ FFSread_index(FFSFile ffsfile)
     FFSIndexItem index_item;
     off_t index_fpos;
     size_t index_size;
-    int fd = (int)(intptr_t)ffsfile->file_id;
     int currentPos = ffs_file_lseek_func(ffsfile->file_id, (size_t)0, SEEK_CUR);
     int end = ffs_file_lseek_func(ffsfile->file_id, (size_t)0, SEEK_END);
     ffs_file_lseek_func(ffsfile->file_id, currentPos, SEEK_SET);   // seek back to original spot
@@ -1206,7 +1203,6 @@ FFSread_comment(FFSFile ffsfile)
 static int
 FFSset_fpos(FFSFile file,  off_t fpos)
 {
-    int fd = (int)(intptr_t)file->file_id;
     /* dangerous to set FPOS if not indexed, but we'll allow it */
     if (file->file_org == Indexed) {
 	/* 
@@ -1243,7 +1239,6 @@ FFSset_fpos(FFSFile file,  off_t fpos)
 extern int
 FFSseek(FFSFile file, int data_item)
 {
-    int fd = (int)(intptr_t)file->file_id;
     struct _FFSIndexItem *index;
     off_t fpos;
     int index_item;
@@ -1314,7 +1309,6 @@ get_AtomicInt(FFSFile file, FILE_INT *file_int_ptr)
 static void
 read_all_index_and_formats(FFSFile file)
 {
-    int fd = (int)(intptr_t)file->file_id;
     off_t fpos = 1;
     int currentPos = ffs_file_lseek_func(file->file_id, (size_t)0, SEEK_CUR);
     int end = ffs_file_lseek_func(file->file_id, (size_t)0, SEEK_END);
@@ -1378,7 +1372,6 @@ convert_last_index_block(FFSFile ffsfile)
     }
     ffsfile->cur_index->write_info.data_index_start =  htonl(*((int*)(index_data+8)));;
     ffsfile->data_count = read_index->last_data_count + 1;
-    int fd = (int)(intptr_t)ffsfile->file_id;
     if (ffs_file_lseek_func(ffsfile->file_id, 0, SEEK_END) == -1)
 	return;
 }
@@ -1473,7 +1466,6 @@ next_record_type(FFSFile ffsfile)
                 if (!ffsfile->next_actual_handle && ffsfile->index_head) {
 
                     struct _FFSIndexItem *index = NULL;
-                    int fd = (int)(intptr_t)ffsfile->file_id;
                     off_t fpos_bak = ffs_file_lseek_func(ffsfile->file_id, 0, SEEK_CUR);
 		    int fid_len = ffsfile->next_fid_len;
 		    char tmp_fid_storage[64];

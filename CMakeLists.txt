@@ -7,7 +7,7 @@ if(POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif()
 
-project(FFS VERSION 2.0.0)
+project(FFS VERSION 3.0.0)
 
 # Some boilerplate to setup nice output directories
 include(GNUInstallDirs)
@@ -229,7 +229,7 @@ target_include_directories(ffs PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/ffs>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-find_package(dill 2.3.1)
+find_package(dill 3.0.0)
 
 option(FFS_USE_DILL "Enable Dill code generation" ${DILL_FOUND})
 
