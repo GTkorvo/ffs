@@ -297,6 +297,7 @@ typedef int (*IOinterface_poll)(void *conn);
 typedef void *(*IOinterface_open)(const char *path,
 					const char *flag_str, 
 					int *input, int *output);
+typedef int (*IOinterface_lseek)(void* conn, size_t pos, int cmd);
 typedef void (*IOinterface_init)(void );
 
 extern IOinterface_func ffs_server_read_func;

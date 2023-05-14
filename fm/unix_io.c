@@ -348,10 +348,17 @@ unix_poll_func(void *conn)
     return (ret_val > 0);
 }
 
+static int
+unix_file_lseek_func (void *file, size_t pos, int origin)
+{
+    return lseek((intptr_t)file, (long)pos, origin);
+}
+
 IOinterface_func ffs_file_read_func = unix_read_func;
 IOinterface_func ffs_file_write_func = unix_write_func;
 IOinterface_funcv ffs_file_readv_func = unix_readv_func;
 IOinterface_funcv ffs_file_writev_func = unix_writev_func;
+IOinterface_lseek ffs_file_lseek_func = (IOinterface_lseek)unix_file_lseek_func;
 
 IOinterface_func ffs_read_func = unix_read_func;
 IOinterface_func ffs_write_func = unix_write_func;
