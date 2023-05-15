@@ -2030,7 +2030,6 @@ static void NO_SANITIZE_THREAD read_generation_environment_variables(void)
     if (_ffs_conversion_generation == -1) {
 	char *gen_string = getenv("FFS_CONVERSION_GENERATION");
 	int tmp = FFS_CONVERSION_GENERATION_DEFAULT;
-	tmp = 0;   //  GSE remove this
 	if (gen_string != NULL) {
 #ifdef MODULE
 	    tmp = strtol(gen_string, NULL, 10);
