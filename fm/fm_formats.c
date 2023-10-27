@@ -1981,7 +1981,6 @@ generate_format3_server_ID(server_ID_type *server_ID,
     }
     ((version_3_format_ID *) server_ID->value)->rep_len = 
 	htons((short)(server_format_rep_length >> 2));   // Mod length by 4
-    short tmp = 0xffff & (server_format_rep_length >> 2);
     ((version_3_format_ID *) server_ID->value)->top_byte_rep_len = (unsigned char)
 	0xff & (server_format_rep_length >> 18);
     ((version_3_format_ID *) server_ID->value)->hash1 = htonl(hash1);
