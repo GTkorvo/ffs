@@ -9,7 +9,6 @@
 #include "stdlib.h"
 #ifndef _MSC_VER
 #include "unistd.h"
-#include <arpa/inet.h>
 #else
 #include <winsock.h>
 #include <io.h>
