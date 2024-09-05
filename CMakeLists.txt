@@ -172,8 +172,6 @@ endif()
 
 find_package(Perl)
 
-set (PERL_FOUND false)
-
 if (PERL_FOUND) 
   add_custom_command(
     OUTPUT "cod_node.c" 
@@ -202,7 +200,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
    SET_SOURCE_FILES_PROPERTIES(cod.tab.c PROPERTIES COMPILE_FLAGS -Wno-unused-function)
 endif()
 
-add_custom_target(generated DEPENDS cod_node.c ${BISON_CODParser_OUTPUT_SOURCE})
+add_custom_target(generated DEPENDS cod_node.c lex.yy.c ${BISON_CODParser_OUTPUT_SOURCE})
 
 list(APPEND COD_MASTER_SRC_LIST
   ${BISON_CODParser_OUTPUT_SOURCE}
@@ -216,6 +214,7 @@ set(FFS_LIBRARY_PREFIX "" CACHE STRING
 mark_as_advanced(FFS_LIBRARY_PREFIX)
 
 add_library(ffs ${FFS_MASTER_SRC_LIST})
+add_dependencies(ffs generated)
 set_target_properties(ffs PROPERTIES
   OUTPUT_NAME ${FFS_LIBRARY_PREFIX}ffs
   VERSION ${FFS_VERSION}
