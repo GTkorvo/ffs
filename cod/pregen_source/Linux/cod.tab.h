@@ -212,7 +212,7 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 201 "cod/cod.y"
+#line 201 "/Users/eisen/prog/ffs/cod/cod.y"
 {
     lx_info info;
     sm_ref reference;

@@ -3009,7 +3009,6 @@ type_list_to_string(cod_parse_context context, sm_list type_list, int *size)
     int string_appeared = 0;
     int spec_count = 0;
     int prefix_end = 0;
-    int type_found = 0;
     int cg_type;
 
     cg_type = DILL_ERR;
@@ -3183,9 +3182,6 @@ type_list_to_string(cod_parse_context context, sm_list type_list, int *size)
 	}
     }
  finalize:
-    if (cg_type != DILL_ERR) {
-	type_found++;
-    }
     switch(cg_type) {
     case DILL_C: 
 	*size = sizeof(char);
@@ -3229,7 +3225,6 @@ cod_build_parsed_type_node(cod_parse_context c, char *name, sm_list l)
 
     sm_list tmp = l;
     sm_list last_type = NULL;
-    int field_count = 0;
     decl->node.struct_type_decl.id = name;
     
      while(tmp != NULL) {
@@ -3289,7 +3284,6 @@ cod_build_parsed_type_node(cod_parse_context c, char *name, sm_list l)
 	new_elem->node->node.field.cg_type = DILL_ERR;
 	new_elem->node->node.field.type_spec = typ;
 	cod_rfree(node);
-	field_count++;
 	last_type = tmp;
 	tmp = tmp->next;
 	free(last_type);
@@ -4960,7 +4954,6 @@ static int semanticize_decl(cod_parse_context context, sm_ref decl,
     switch(decl->node_type) {
     case cod_declaration: {
 	sm_ref ctype;
-	int is_block_type = 0;
 
 	if (resolve_local(decl->node.declaration.id, scope) != NULL) {
 	    if (resolve_local(decl->node.declaration.id, scope) != decl) {
@@ -5071,9 +5064,6 @@ static int semanticize_decl(cod_parse_context context, sm_ref decl,
 	    decl->node.declaration.sm_complex_type = typ;
 	}
 	ctype = decl->node.declaration.sm_complex_type;
-	if ((ctype != NULL) && ((ctype->node_type == cod_array_type_decl) || (ctype->node_type == cod_struct_type_decl))) {
-	    is_block_type = 1;
-	}
 	if (decl->node.declaration.init_value != NULL) {
 	    int ret;
 	    ret = semanticize_expr(context, decl->node.declaration.init_value, 
@@ -6447,7 +6437,7 @@ space_to_underscore(char *str){
     while(*str != '\0'){
 	if(isspace(*str))
 	    *str = '_';
-	    str++;
+	str++;
     }
 }
 
@@ -6732,7 +6722,7 @@ evaluate_constant_return_expr(cod_parse_context context, sm_ref expr, int *free_
 	    *free_result = 1;
 	} else {
 	    /* we get an integer result */
-	    intptr_t left_val = 0, right_val = 0, value;
+	    intptr_t left_val = 0, right_val = 0, value = 0;
 	    char str_val[40];
 	    if (expr->node.operator.left)
 		left_val = get_constant_long_value(context, left);
