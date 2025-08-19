@@ -1,1 +1,1 @@
-dir /s /b /o:gn D:/a/ffs/ffs/
+dir /s /b /o:gn D:\a\ffs\ffs\
