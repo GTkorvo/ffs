@@ -12,4 +12,4 @@ cmake \
   ../source
 cmake --build . -j4 --config $1
 cmake --install . --config $1
-echo "Finish install ATL script"
+echo "Finish install ATL script, dest is ${PWD}/../install"
