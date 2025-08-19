@@ -23,8 +23,7 @@ if(WIN32)
             PROPERTIES ENVIRONMENT "PATH=${PATH_ADDITION}$ENV{PATH}"
     )
     ADD_TEST(NAME WIP COMMAND "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/dumpbin.exe" /dependents "D:/a/ffs/ffs/build/bin/Release/align_test.exe")
-    ADD_TEST(NAME WIP2 COMMAND "dir /s /b D:/a/ffs/ffs/")
-    ADD_TEST(NAME WIP3 COMMAND "ls.bat")
+    ADD_TEST(NAME WIP3 COMMAND "${CURRENT_SOURCE_DIR}/ls.bat")
 endif()
 
 foreach (PROG ${PROGS} )
