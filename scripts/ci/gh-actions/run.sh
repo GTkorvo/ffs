@@ -47,7 +47,7 @@ env | sort
 
 echo "********** Running CTest **********"
 
-${CTEST} -VV \
+${CTEST} --debug \
   -S ${CI_SOURCE_DIR}/scripts/ci/cmake/${GH_YML_JOBNAME}.cmake \
   -DCTEST_BUILD_CONFIGURATION=${GH_YML_BUILDTYPE} \
   -Ddashboard_do_submit=ON \
