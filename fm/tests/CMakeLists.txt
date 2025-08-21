@@ -18,12 +18,13 @@ if(WIN32)
     # Ensure the required DLLs can be found at runtime
     message(STATUS "PATH ADDITION is ${PATH_ADDITION}")
     message(STATUS "TESTS is ${TESTS}")
+    ADD_TEST(NAME WIP COMMAND "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/dumpbin.exe" /dependents "D:/a/ffs/ffs/build/bin/Release/align_test.exe")
+    ADD_TEST(NAME WIP3 COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/ls.bat")
+    LIST (APPEND TESTS WIP WIP3)
     set_tests_properties(
             ${TESTS}
             PROPERTIES ENVIRONMENT "PATH=${PATH_ADDITION}$ENV{PATH}"
     )
-    ADD_TEST(NAME WIP COMMAND "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/dumpbin.exe" /dependents "D:/a/ffs/ffs/build/bin/Release/align_test.exe")
-    ADD_TEST(NAME WIP3 COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/ls.bat")
 endif()
 
 foreach (PROG ${PROGS} )
