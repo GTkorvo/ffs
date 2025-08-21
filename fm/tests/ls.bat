@@ -1,5 +1,5 @@
 echo ffs.dll
-where ffs.dll
+C:\Windows\System32\where.exe ffs.dll
 echo
 echo api-ms-win-crt-heap-l1-1-0.dll
 where api-ms-win-crt-heap-l1-1-0.dll
