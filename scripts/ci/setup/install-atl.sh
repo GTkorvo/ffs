@@ -13,3 +13,4 @@ cmake \
 cmake --build . -j4 --config $1
 cmake --install . --config $1
 echo "Finish install ATL script, destination is ${PWD}/../install"
+echo "${PWD}/../install/bin:${PWD}/../install/lib:" >> $GITHUB_PATH
