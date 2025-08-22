@@ -13,6 +13,9 @@ echo
 echo dir
 echo
 dir /s /b /o:gn D:\a\ffs\ffs\
+echo PATH
 echo %PATH%
 set PATH=%PATH%;D:\a\ffs\ffs\atl\build\bin\Release\;D:\a\ffs\ffs\dill\build\bin\Release\;
+echo PATH2
+echo %PATH%
 D:\a\ffs\ffs\build\bin\Release\align_test.exe
