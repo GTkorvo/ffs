@@ -13,3 +13,5 @@ echo
 echo dir
 echo
 dir /s /b /o:gn D:\a\ffs\ffs\
+echo ${PATH}
+D:\a\ffs\ffs\build\bin\Release\align_test.exe
