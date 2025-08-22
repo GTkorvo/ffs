@@ -11,3 +11,5 @@ reg query "HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Session Manag
 echo $PATH
 echo "PATH = ${PATH}"
 echo "pwd = ${PWD}"
+export PATH=${PATH}:${PWD}/atl/install/Release/lib:${PWD}/atl/install/Release/bin:${PWD}/dill/install/Release/lib:${PWD}/dill/install/Release/bin:
+echo "newpwd = ${PWD}"
