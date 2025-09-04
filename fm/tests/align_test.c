@@ -158,5 +158,6 @@ main(int argc, char **argv)
     do_test(triangle_format_list);
     do_test(add_action_format_list);
     do_test(node_format_list);
+    printf("Test Ran");
     return 0;
 }
