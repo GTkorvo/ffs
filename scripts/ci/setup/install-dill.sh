@@ -12,5 +12,7 @@ cmake \
   ../source
 cmake --build . -j4 --config $1
 cmake --install . --config $1
-cp ${PWD}/../install/bin/dill.dll /c/Windows/system32
+if [ -f ${PWD}/../install/bin/dill.dll ]; then
+   cp ${PWD}/../install/bin/dill.dll /c/Windows/system32
+fi
 echo "Finish install DILL script"
