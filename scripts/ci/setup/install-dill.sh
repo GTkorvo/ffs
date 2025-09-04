@@ -12,5 +12,5 @@ cmake \
   ../source
 cmake --build . -j4 --config $1
 cmake --install . --config $1
-echo "Finish install DILL script destination = ${PWD}/../install"
-echo "${PWD}/../install/bin:${PWD}/../install/lib:" >> $GITHUB_PATH
+cp ${PWD}/../install/bin/dill.dll /c/Windows/system32
+echo "Finish install DILL script"
