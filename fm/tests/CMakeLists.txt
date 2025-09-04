@@ -6,6 +6,8 @@ foreach (TEST ${TESTS} )
     TARGET_LINK_LIBRARIES(${TEST} ffs )
     ADD_TEST(NAME ${TEST} COMMAND ${TEST})
 endforeach()
+ADD_EXECUTABLE(simple simple.c)
+ADD_TEST(NAME simple_test COMMAND simple)
 
 if(WIN32)
     # set (PATH_ADDITION "")
