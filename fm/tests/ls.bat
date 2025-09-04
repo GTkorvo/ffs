@@ -13,4 +13,10 @@ echo
 echo dir
 echo
 dir /s /b /o:gn D:\a\ffs\ffs\
+echo PATH
+echo %PATH%
+set PATH=%PATH%;D:\a\ffs\ffs\atl\install\lib;D:\a\ffs\ffs\dill\install\lib
+echo PATH2
+echo %PATH%
 D:\a\ffs\ffs\build\bin\Release\align_test.exe
+echo DONE
