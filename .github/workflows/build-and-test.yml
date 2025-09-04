@@ -97,10 +97,14 @@ jobs:
         path: source
     - name: Setup
       if: ${{ runner.os == 'Windows' }}
+      shell: bash
       run: |
           . source/scripts/ci/setup/windows.sh
           source/scripts/ci/setup/install-atl.sh ${{ matrix.buildtype }}
+          echo "${{github.workspace}}/atl/install/lib/" >> $GITHUB_PATH
           source/scripts/ci/setup/install-dill.sh ${{ matrix.buildtype }}
+          echo "${{github.workspace}}/dill/install/lib/" >> $GITHUB_PATH
+	  echo $GITHUB_PATH
     - name: Setup
       if: ${{ runner.os == 'macOS' }}
       run: |
@@ -108,6 +112,7 @@ jobs:
           source/scripts/ci/setup/install-atl.sh ${{ matrix.buildtype }}
           source/scripts/ci/setup/install-dill.sh ${{ matrix.buildtype }}
     - name: Update
+      shell: bash
       run: source/scripts/ci/gh-actions/run.sh update
     - name: Configure
       run: source/scripts/ci/gh-actions/run.sh configure
