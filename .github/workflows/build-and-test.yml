@@ -70,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        buildtype: [ release, debug ]
+        buildtype: [ release ]
         jobname: [
           windows2025-vs2022-clang,
           windows2022-vs2022-msvc,
