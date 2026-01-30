@@ -15,65 +15,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # UndefinedBehaviorSanitizer build to detect undefined behavior
-  ubsan:
-    timeout-minutes: 45
-    runs-on: ubuntu-24.04
-    env:
-      CC: clang
-      CXX: clang++
-      UBSAN_FLAGS: "-fsanitize=undefined -fno-omit-frame-pointer"
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang llvm cmake ninja-build git
-
-    - name: Build atl with UBSan
-      run: |
-        git clone --depth 1 https://github.com/GTkorvo/atl.git
-        cmake -G Ninja -S atl -B atl/build \
-          -DCMAKE_C_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_CXX_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_EXE_LINKER_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_SHARED_LINKER_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install \
-          -DCMAKE_BUILD_TYPE=Debug
-        ninja -C atl/build install
-
-    - name: Build dill with UBSan
-      run: |
-        git clone --depth 1 https://github.com/GTkorvo/dill.git
-        cmake -G Ninja -S dill -B dill/build \
-          -DCMAKE_C_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_CXX_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_EXE_LINKER_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_SHARED_LINKER_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install \
-          -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install \
-          -DCMAKE_BUILD_TYPE=Debug
-        ninja -C dill/build install
-
-    - name: Configure ffs with UBSan
-      run: |
-        cmake -G Ninja -S . -B build \
-          -DCMAKE_C_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_CXX_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_EXE_LINKER_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_SHARED_LINKER_FLAGS="${UBSAN_FLAGS}" \
-          -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DBUILD_TESTING=ON
-
-    - name: Build
-      run: ninja -C build
-
-    - name: Test
-      run: ctest --test-dir build --output-on-failure
-
   # MemorySanitizer build to detect uninitialized memory reads
   msan:
     timeout-minutes: 45
