@@ -846,6 +846,7 @@ type_alignment(FMFormat fmformat, int field)
 	    case unknown_type: case string_type:
 		assert(0);
 	    case float_type:
+		if (size == -1) return -1;
 		if (size < sizeof(float)) return size;
 		if (size < sizeof(double)) return FMOffset(sf, f);
 		if (size < sizeof(long double)) return FMOffset(sd, d);
@@ -960,7 +961,7 @@ set_sizes_and_offsets(FMFormat top, int index, FMStructDescList structs)
 	    free(base_type);
 	}
 	align_req = type_alignment(f, i);
-    
+
 	if (align_req > 0) {
 	    if (align_req > f->alignment) {
 		f->alignment = align_req;
