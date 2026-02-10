@@ -111,6 +111,13 @@ jobs:
           . source/scripts/ci/setup/linux.sh
           source/scripts/ci/setup/install-atl.sh ${{ matrix.buildtype }}
           source/scripts/ci/setup/install-dill.sh ${{ matrix.buildtype }}
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: build
+        key: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.buildtype }}-${{ hashFiles('source/CMakeLists.txt', 'source/**/*.cmake') }}
+        restore-keys: |
+          ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.buildtype }}-
     - name: Update
       run: source/scripts/ci/gh-actions/run.sh update
     - name: Configure
