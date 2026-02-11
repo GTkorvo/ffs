@@ -239,7 +239,7 @@ target_include_directories(ffs PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/ffs>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-find_package(dill 3.0.0 QUIET)
+find_package(dill 3.3.0 QUIET)
 
 option(FFS_USE_DILL "Enable Dill code generation" ${DILL_FOUND})
 
