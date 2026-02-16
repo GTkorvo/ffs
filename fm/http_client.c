@@ -23,6 +23,7 @@
 #include <unistd.h>
 #endif
 #include <sys/types.h>
+#ifndef HAVE_WINDOWS_H
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
@@ -32,8 +33,19 @@
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
-#ifndef HAVE_WINDOWS_H
 #include <poll.h>
+#define SOCKET int
+#define INVALID_SOCKET -1
+#define closesocket close
+#define sock_read(s, b, l) read(s, b, l)
+#define sock_write(s, b, l) write(s, b, l)
+#define sock_poll(fds, n, t) poll(fds, n, t)
+#else
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#define sock_read(s, b, l) recv(s, b, l, 0)
+#define sock_write(s, b, l) send(s, b, l, 0)
+#define sock_poll(fds, n, t) WSAPoll(fds, n, t)
 #endif
 
 #include "fm.h"
@@ -54,7 +66,7 @@ static char http_base_path[512] = "";
 static int url_parsed = 0;
 
 /* Persistent connection */
-static int persistent_sock = -1;
+static SOCKET persistent_sock = INVALID_SOCKET;
 
 /*
  * Parse "http://host[:port]/path" into host, port, base_path.
@@ -113,18 +125,18 @@ parse_http_url(const char *url)
 
 /*
  * Open a new TCP connection to the HTTP server.
- * Returns socket fd or -1 on error.
+ * Returns socket or INVALID_SOCKET on error.
  */
-static int
+static SOCKET
 http_connect_new(void)
 {
     struct sockaddr_in addr;
     struct hostent *he;
-    int sock;
+    SOCKET sock;
     int delay_value = 1;
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) return -1;
+    if (sock == INVALID_SOCKET) return INVALID_SOCKET;
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -136,15 +148,15 @@ http_connect_new(void)
     } else {
         unsigned long ip = inet_addr(http_host);
         if (ip == (unsigned long)-1) {
-            close(sock);
-            return -1;
+            closesocket(sock);
+            return INVALID_SOCKET;
         }
         addr.sin_addr.s_addr = ip;
     }
 
     if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        close(sock);
-        return -1;
+        closesocket(sock);
+        return INVALID_SOCKET;
     }
 
     setsockopt(sock, IPPROTO_TCP, TCP_NODELAY,
@@ -154,22 +166,22 @@ http_connect_new(void)
 
 /*
  * Ensure the persistent connection is open.
- * Returns socket fd or -1 on error.
+ * Returns socket or INVALID_SOCKET on error.
  */
-static int
+static SOCKET
 ensure_connection(void)
 {
-    if (persistent_sock >= 0) {
+    if (persistent_sock != INVALID_SOCKET) {
         /* Quick check if connection is still alive */
         struct pollfd pfd;
         pfd.fd = persistent_sock;
         pfd.events = POLLIN;
-        if (poll(&pfd, 1, 0) > 0 && (pfd.revents & (POLLHUP | POLLERR))) {
-            close(persistent_sock);
-            persistent_sock = -1;
+        if (sock_poll(&pfd, 1, 0) > 0 && (pfd.revents & (POLLHUP | POLLERR))) {
+            closesocket(persistent_sock);
+            persistent_sock = INVALID_SOCKET;
         }
     }
-    if (persistent_sock < 0) {
+    if (persistent_sock == INVALID_SOCKET) {
         persistent_sock = http_connect_new();
     }
     return persistent_sock;
@@ -179,11 +191,11 @@ ensure_connection(void)
  * Send a full buffer to socket.
  */
 static int
-http_send_all(int sock, const char *buf, int len)
+http_send_all(SOCKET sock, const char *buf, int len)
 {
     int sent = 0;
     while (sent < len) {
-        int n = write(sock, buf + sent, len - sent);
+        int n = sock_write(sock, buf + sent, len - sent);
         if (n <= 0) return -1;
         sent += n;
     }
@@ -195,11 +207,11 @@ http_send_all(int sock, const char *buf, int len)
  * or -1 on error.  Does not null-terminate.
  */
 static int
-read_line(int sock, char *buf, int buf_size)
+read_line(SOCKET sock, char *buf, int buf_size)
 {
     int i = 0;
     while (i < buf_size - 1) {
-        int n = read(sock, buf + i, 1);
+        int n = sock_read(sock, buf + i, 1);
         if (n <= 0) return (i > 0) ? i : -1;
         i++;
         if (buf[i - 1] == '\n') break;
@@ -213,7 +225,7 @@ read_line(int sock, char *buf, int buf_size)
  * Updates *total and *capacity.
  */
 static int
-read_chunked_body(int sock, char **buf, int *total, int *capacity)
+read_chunked_body(SOCKET sock, char **buf, int *total, int *capacity)
 {
     char line[64];
     for (;;) {
@@ -234,7 +246,7 @@ read_chunked_body(int sock, char **buf, int *total, int *capacity)
         /* Read exactly chunk_size bytes */
         int got = 0;
         while (got < chunk_size) {
-            int n = read(sock, *buf + *total + got, chunk_size - got);
+            int n = sock_read(sock, *buf + *total + got, chunk_size - got);
             if (n <= 0) return -1;
             got += n;
         }
@@ -252,7 +264,7 @@ read_chunked_body(int sock, char **buf, int *total, int *capacity)
  * Returns malloc'd buffer containing full response, sets *out_len.
  */
 static char *
-http_read_response_keepalive(int sock, int *out_len)
+http_read_response_keepalive(SOCKET sock, int *out_len)
 {
     int capacity = 4096;
     int total = 0;
@@ -264,7 +276,7 @@ http_read_response_keepalive(int sock, int *out_len)
 
     /* Read byte-by-byte until we find end of headers */
     while (total < capacity - 1) {
-        n = read(sock, buf + total, 1);
+        n = sock_read(sock, buf + total, 1);
         if (n <= 0) {
             buf[total] = '\0';
             *out_len = total;
@@ -341,7 +353,7 @@ http_read_response_keepalive(int sock, int *out_len)
                 capacity = total + body_remaining + 1;
                 buf = realloc(buf, capacity);
             }
-            n = read(sock, buf + total, body_remaining);
+            n = sock_read(sock, buf + total, body_remaining);
             if (n <= 0) break;
             total += n;
             body_remaining -= n;
@@ -437,14 +449,14 @@ http_server_register_format(FMContext fmc, FMFormat format)
     int status;
     char *hex_id;
     int id_len;
-    int sock;
-    char path[1024];
+    SOCKET sock;
+    char path[2048];
     int request_len;
 
     if (!parse_http_url(ffs_http_server_url)) return 0;
 
     sock = ensure_connection();
-    if (sock < 0) return 0;
+    if (sock == INVALID_SOCKET) return 0;
 
     /* Get the binary format rep */
     rep_data = get_server_rep_FMformat(format, &rep_len);
@@ -476,8 +488,8 @@ http_server_register_format(FMContext fmc, FMFormat format)
     free(json_body);
 
     if (http_send_all(sock, request, (int)strlen(request)) < 0) {
-        close(persistent_sock);
-        persistent_sock = -1;
+        closesocket(persistent_sock);
+        persistent_sock = INVALID_SOCKET;
         free(request);
         return 0;
     }
@@ -492,8 +504,8 @@ http_server_register_format(FMContext fmc, FMFormat format)
         }
         free(response);
         /* Connection may be bad after error */
-        close(persistent_sock);
-        persistent_sock = -1;
+        closesocket(persistent_sock);
+        persistent_sock = INVALID_SOCKET;
         return 0;
     }
 
@@ -528,7 +540,7 @@ http_server_get_format(FMContext fmc, void *buffer)
 {
     int id_size;
     char hex_id[256];
-    char path[1024];
+    char path[2048];
     char *request;
     int request_len;
     char *response;
@@ -540,12 +552,12 @@ http_server_get_format(FMContext fmc, void *buffer)
     int rep_len;
     format_rep rep;
     FMFormat format;
-    int sock;
+    SOCKET sock;
 
     if (!parse_http_url(ffs_http_server_url)) return NULL;
 
     sock = ensure_connection();
-    if (sock < 0) return NULL;
+    if (sock == INVALID_SOCKET) return NULL;
 
     /* Determine ID size from version.
      * ID_length has 3 entries for versions 0, 1, 2. */
@@ -560,7 +572,7 @@ http_server_get_format(FMContext fmc, void *buffer)
 
     /* Build HTTP/1.1 GET request with keep-alive */
     snprintf(path, sizeof(path), "%s/v1/formats/%s", http_base_path, hex_id);
-    request_len = 512;
+    request_len = (int)strlen(path) + 512;
     request = malloc(request_len);
     snprintf(request, request_len,
              "GET %s HTTP/1.1\r\n"
@@ -569,8 +581,8 @@ http_server_get_format(FMContext fmc, void *buffer)
              path, http_host);
 
     if (http_send_all(sock, request, (int)strlen(request)) < 0) {
-        close(persistent_sock);
-        persistent_sock = -1;
+        closesocket(persistent_sock);
+        persistent_sock = INVALID_SOCKET;
         free(request);
         return NULL;
     }
@@ -584,8 +596,8 @@ http_server_get_format(FMContext fmc, void *buffer)
             fprintf(stderr, "HTTP format get failed, status %d\n", status);
         }
         free(response);
-        close(persistent_sock);
-        persistent_sock = -1;
+        closesocket(persistent_sock);
+        persistent_sock = INVALID_SOCKET;
         return NULL;
     }
 
