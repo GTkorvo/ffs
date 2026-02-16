@@ -121,10 +121,10 @@ endif()
 if(NO_SOCKETS AND NOT WINDOWS)
   set(FM_SOCKET_IO null_io.c)
 elseif(WINDOWS)
-  set(FM_SOCKET_IO "server_acts.c;nt_io.c")
+  set(FM_SOCKET_IO "server_acts.c;nt_io.c;http_client.c")
   set(FFS_FILE_IO nt_io.c)
 else()
-  set(FM_SOCKET_IO "server_acts.c;unix_io.c")
+  set(FM_SOCKET_IO "server_acts.c;unix_io.c;http_client.c")
   set(FFS_FILE_IO unix_io.c)
 endif()
 
@@ -327,7 +327,7 @@ try_run(FFS_FLOAT_FORMAT_TEST COMPILE_RESULT
 message(STATUS "Float format is ${FFS_FLOAT_FORMAT}")
 
 if(NOT DEFINED FORMAT_SERVER_HOST)
-  set(FORMAT_SERVER_HOST "formathost.cercs.gatech.edu")
+  set(FORMAT_SERVER_HOST "http://gregeisenhauer.online/cgi-bin/korvo_server")
 endif()
 
 if(NOT DEFINED FORMAT_SERVICE_DOMAIN)
