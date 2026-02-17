@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #include <atl.h>
 #include <ffs.h>
@@ -586,21 +587,12 @@ static void FillMetadataMsg(int CohortSize, struct _TimestepMetadataMsg *Msg,
 
 }
 
-int
-main(int argc, char **argv)
+static int run_one_test(FFSContext ffs_c, FMContext fm_c, int iteration)
 {
-    FFSContext ffs_c;
-    FMContext fm_c;
     void *RetDataBlock;
     ReturnMetadataInfo ReturnData;
     struct _ReturnMetadataInfo TimestepMetaData;
     int i;
-    fm_c = create_local_FMcontext();
-    ffs_c = create_FFSContext_FM(fm_c);
-
-    if ((argc > 1) && (strcmp(argv[1], "-v") == 0)) verbose++;
-                             
-    doFormatRegistration(ffs_c, fm_c);
 
     struct _MetadataPlusDPInfo * pointers = malloc(sizeof(*pointers));
 
@@ -614,34 +606,84 @@ main(int argc, char **argv)
     for (i = 0; i < TimestepMetaData.ReaderCount; i++)
     {
         TimestepMetaData.ReaderStatus[i] = 1;
-        }
+    }
     FillMetadataMsg(1 /* CohortSize */, &TimestepMetaData.Msg, &pointers);
 
     if (verbose) {
         printf("Before, TimestepMetaData.Metadata[0].DataSize = %zu  block %p \n", TimestepMetaData.Msg.Metadata[0].DataSize, TimestepMetaData.Msg.Metadata[0].block);
-
-        printf("&TimestepMetaData = %p\n", &TimestepMetaData);
-        printf("TimestepMetaData.ReaderCount = %d, ReaderStatus = %p\n", TimestepMetaData.ReaderCount, TimestepMetaData.ReaderStatus);
-        printf("&TimestepMetaData.Msg = %p\n", &TimestepMetaData.Msg);
-        printf("TimestepMetaData.Msg.CohortSize = %d, Timestep = %d, Formats = %p\n", TimestepMetaData.Msg.CohortSize, TimestepMetaData.Msg.Timestep, TimestepMetaData.Msg.Formats);
-        printf("TimestepMetaData.Msg.Metadata = %p\n", TimestepMetaData.Msg.Metadata);
-        if (TimestepMetaData.Msg.Metadata)
-            printf("TimestepMetaData.Msg.Metadata[0].block = %p, .size = %zu\n", TimestepMetaData.Msg.Metadata[0].block, TimestepMetaData.Msg.Metadata[0].DataSize);
     }
     ReturnData = CP_distributeDataFromRankZero(ffs_c, &TimestepMetaData,
                                              ReturnMetadataInfoFormat, &RetDataBlock);
 
-    if (verbose) {
-        printf("ReturnData = %p\n", ReturnData);
-        printf("ReturnData->ReaderCount = %d, ReaderStatus = %p\n", ReturnData->ReaderCount, ReturnData->ReaderStatus);
-        printf("&ReturnData->Msg = %p\n", &ReturnData->Msg);
-        printf("ReturnData->Msg.CohortSize = %d, Timestep = %d, Formats = %p\n", ReturnData->Msg.CohortSize, ReturnData->Msg.Timestep, ReturnData->Msg.Formats);
-        printf("ReturnData->Msg.Metadata = %p\n", ReturnData->Msg.Metadata);
-        if (ReturnData->Msg.Metadata)
-            printf("ReturnData->Msg.Metadata[0].block = %p, .size = %zu\n", ReturnData->Msg.Metadata[0].block, ReturnData->Msg.Metadata[0].DataSize);
-        printf("After, ReturnData.Metadata[0](%p).DataSize = %zu  block %p \n", ReturnData->Msg.Metadata, ReturnData->Msg.Metadata[0].DataSize, ReturnData->Msg.Metadata[0].block);
-        printf("After, ReturnData.Metadata[0].block[0] = 0x%0x \n", *(int*)ReturnData->Msg.Metadata[0].block);
+    /* Validate decoded data - print diagnostics on failure */
+    if (ReturnData == NULL) {
+        fprintf(stderr, "FAIL iter=%d: ReturnData is NULL\n", iteration);
+        return 1;
     }
-    if(*(int*)ReturnData->Msg.Metadata[0].block != 0xdeadbeef) {fprintf(stderr, "BAD VALUE\n"); exit(1);}
+    if (ReturnData->Msg.Metadata == NULL) {
+        fprintf(stderr, "FAIL iter=%d: Metadata is NULL\n", iteration);
+        return 1;
+    }
+    if (ReturnData->Msg.Metadata[0].block == NULL) {
+        fprintf(stderr, "FAIL iter=%d: block is NULL\n", iteration);
+        return 1;
+    }
+    {
+        char *buf = (char *)RetDataBlock;
+        size_t buf_size = 2048;
+        int block_val = *(int*)ReturnData->Msg.Metadata[0].block;
+        if (block_val != (int)0xdeadbeef) {
+            fprintf(stderr, "FAIL iter=%d: BAD VALUE 0x%x (expected 0xdeadbeef)\n",
+                    iteration, (unsigned)block_val);
+            fprintf(stderr, "  RetDataBlock=%p ReturnData=%p\n", RetDataBlock, (void*)ReturnData);
+            fprintf(stderr, "  Metadata=%p DataSize=%zu block=%p\n",
+                    (void*)ReturnData->Msg.Metadata,
+                    ReturnData->Msg.Metadata[0].DataSize,
+                    (void*)ReturnData->Msg.Metadata[0].block);
+            if ((char*)ReturnData->Msg.Metadata < buf ||
+                (char*)ReturnData->Msg.Metadata >= buf + buf_size)
+                fprintf(stderr, "  Metadata pointer OUT OF BUFFER [%p, %p)\n",
+                        (void*)buf, (void*)(buf + buf_size));
+            if ((char*)ReturnData->Msg.Metadata[0].block < buf ||
+                (char*)ReturnData->Msg.Metadata[0].block >= buf + buf_size)
+                fprintf(stderr, "  block pointer OUT OF BUFFER [%p, %p)\n",
+                        (void*)buf, (void*)(buf + buf_size));
+            return 1;
+        }
+    }
+    free(RetDataBlock);
+    free(TimestepMetaData.ReaderStatus);
+    free(TimestepMetaData.Msg.Metadata[0].block);
+    free(TimestepMetaData.Msg.Metadata);
+    free(TimestepMetaData.Msg.AttributeData);
+    free(pointers);
+    return 0;
+}
+
+int
+main(int argc, char **argv)
+{
+    FFSContext ffs_c;
+    FMContext fm_c;
+    int repeat = 1;
+    int i;
+    char *env;
+
+    fm_c = create_local_FMcontext();
+    ffs_c = create_FFSContext_FM(fm_c);
+
+    if ((argc > 1) && (strcmp(argv[1], "-v") == 0)) verbose++;
+    if ((argc > 1) && (strcmp(argv[1], "-r") == 0) && argc > 2) repeat = atoi(argv[2]);
+    if ((env = getenv("FFS_TEST_REPEAT")) != NULL) repeat = atoi(env);
+
+    doFormatRegistration(ffs_c, fm_c);
+
+    for (i = 0; i < repeat; i++) {
+        if (run_one_test(ffs_c, fm_c, i)) {
+            fprintf(stderr, "Failed on iteration %d of %d\n", i, repeat);
+            return 1;
+        }
+    }
+    if (repeat > 1) fprintf(stderr, "PASS: %d iterations\n", repeat);
     return 0;
 }
