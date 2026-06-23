@@ -26,7 +26,7 @@ jobs:
       MSAN_FLAGS: "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer"
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install dependencies
       run: |
@@ -102,7 +102,7 @@ jobs:
           container: ubuntu:22.04
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         ref: ${{ github.event.pull_request.head.sha }}
         path: source
@@ -112,7 +112,7 @@ jobs:
           source/scripts/ci/setup/install-atl.sh ${{ matrix.buildtype }}
           source/scripts/ci/setup/install-dill.sh ${{ matrix.buildtype }}
     - name: Cache CMake build
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: build
         key: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.buildtype }}-${{ hashFiles('source/CMakeLists.txt', 'source/**/*.cmake') }}
@@ -140,7 +140,7 @@ jobs:
       CC: ${{ matrix.compiler }}
       CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -210,7 +210,7 @@ jobs:
         shell: bash
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         ref: ${{ github.event.pull_request.head.sha }}
         path: source
